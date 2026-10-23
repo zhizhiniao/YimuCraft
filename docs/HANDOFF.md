@@ -540,3 +540,11 @@ PR 媒体可能关工程仍占用；EPERM 移动失败已验证保留源目录�
 - 回退：可从本地原 Git 分支恢复源码/文档；已删除未跟踪的临时素材和旧安装包不保证恢复。当前安装包 SHA256 见 DEVELOPER-ARCHIVE.json。
 - 发布：私有 zhizhiniao/YimuCraft 已接收独立 main 源码快照及安装包。GitHub 安装包为 YimuCraft.Setup.0.7.34.exe，193,061,239 字节；服务端 SHA256 与本地 fa293bcf64731ed692a9d45f3fb1bcb2121f7a03700ef96b1687d41d27d50d1f 一致。随包校验文件使用 GitHub 规范化后的文件名。
 - 下一步：后续开发从 main 另开分支，不覆盖归档标签。公开仓库和开源许可尚未选择；本机旧 master 历史不推送。远端发布最终状态留存于 evidence/developer-archive-20261022/remote-release.json。
+
+### 2026-10-22 — GitHub 首页 Logo 与个人微信联系入口
+- 原因：用户要求将已选 Logo 和本人提供的微信二维码放到 GitHub 介绍，群二维码暂不处理。
+- 变更：README 顶部展示橙底米白光束 Logo；联系作者区新增个人二维码及咨询、反馈、申请进群说明。
+- 文件：README.md、docs/images/yimucraft-logo.png、docs/images/wechat-contact.png、docs/HANDOFF.md。
+- 验证：发布前核对图片路径、原二维码文件字节和 Git 提交仅包含上述四个文件；发布后读取远端 README 与图片 blob 核对。
+- 边界：不修改软件 Logo 或发布新安装包，不改变仓库私有状态；二维码可解码不等于实际加好友验收。
+- 回退：撤销本次介绍提交即可；不涉及运行库。下一步按用户反馈调整介绍。

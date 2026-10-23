@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/yimucraft-logo.png" alt="一幕 YimuCraft Logo" width="128" />
+</p>
+
 # 一幕 YimuCraft
 
 **素材随取，灵感成幕。——蒋啊讲出品**
@@ -87,5 +91,9 @@ work/                 临时测试数据，不提交 Git
 YimuCraft 为独立实现项目，与 Adobe、Aetodo 无隶属或背书关系。仓库不包含原版程序包、专有源码和个人素材库。
 
 ## 联系作者
+
+有使用问题、建议反馈，或想加入一幕 YimuCraft 交流群，可以扫码添加我的微信，备注「一幕」。
+
+<img src="docs/images/wechat-contact.png" alt="蒋啊讲的个人微信二维码" width="320" />
 
 公众号：**知鸟PLAN** · 微信：**aizzn2030**
