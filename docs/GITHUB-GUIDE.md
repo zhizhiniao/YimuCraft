@@ -16,3 +16,12 @@ README 参考 GitHub 官方说明与 Electron 桌面项目的组织方式：用�
 - [GitHub 发布版本说明](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
 - [Electron Fiddle](https://github.com/electron/fiddle)
 - [GitHub Desktop](https://github.com/desktop/desktop)
+
+## 本次可复用经验候选
+
+- 行动：将源码快照、Release 安装包和个人运行数据分开管理，用哈希固定已有运行版。
+- 结果：源码上传约 2.10 MiB；安装包服务端 SHA256 与本地一致；个人素材未上传。
+- 原因：Git 历史与已跟踪数据不会因为新增 .gitignore 自动消失，独立快照可避免携带旧测试记录。
+- 验收：核对远端文件树、标签、安装包哈希及空库启动；仅看到上传成功提示不够。
+- 反例：直接上传整个项目目录，或把未完整验收的开发归档称为稳定发行版。
+- 边界：这是本次整理的候选做法，尚未确认升级为通用经验；不等于安全或完整兼容性审计。

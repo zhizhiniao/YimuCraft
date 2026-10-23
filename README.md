@@ -22,7 +22,7 @@
 
 ## 安装与开始使用
 
-1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.34-dev.1) 下载 `YimuCraft Setup 0.7.34.exe`。
+1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.34-dev.1) 下载 `YimuCraft.Setup.0.7.34.exe`。
 2. 将安装包放在本机磁盘后运行，按向导完成安装。
 3. 打开“一幕 YimuCraft”，新建素材库或导入文件。首次安装不附带演示素材。
 4. 如需 Adobe 联动，按[使用说明](docs/USAGE.md)安装对应面板。
@@ -34,7 +34,7 @@
 下载页同时提供 `SHA256SUMS.txt`。在 PowerShell 中运行以下命令，将结果与校验文件对照：
 
 ```powershell
-Get-FileHash '.\YimuCraft Setup 0.7.34.exe' -Algorithm SHA256
+Get-FileHash '.\YimuCraft.Setup.0.7.34.exe' -Algorithm SHA256
 ```
 
 ## 本地开发
