@@ -1,0 +1,8 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{mediaResponse}=require('../src/media-response.cjs');
+test('local media returns exact lengths and byte ranges needed for audio seeking',async()=>{
+ const root=path.resolve('work/media-response-'+Date.now());fs.mkdirSync(root,{recursive:true});const file=path.join(root,'sample.wav'),bytes=Buffer.from('0123456789');fs.writeFileSync(file,bytes);const request=(range,method='GET')=>new Request('https://local.test/media',{method,headers:range?{Range:range}:{}});
+ let r=await mediaResponse(file,request());assert.equal(r.status,200);assert.equal(r.headers.get('content-length'),'10');assert.equal(r.headers.get('content-type'),'audio/wav');assert.equal(await r.text(),'0123456789');
+ for(const [range,text,contentRange] of [['bytes=2-5','2345','bytes 2-5/10'],['bytes=7-','789','bytes 7-9/10'],['bytes=-3','789','bytes 7-9/10'],['bytes=8-100','89','bytes 8-9/10']]){r=await mediaResponse(file,request(range));assert.equal(r.status,206);assert.equal(r.headers.get('content-range'),contentRange);assert.equal(Number(r.headers.get('content-length')),text.length);assert.equal(await r.text(),text);}
+ for(const range of ['bytes=10-','bytes=8-2','bytes=-0','bytes=0-1,4-5','bytes=999999999999999999-']){r=await mediaResponse(file,request(range));assert.equal(r.status,416);assert.equal(r.headers.get('content-range'),'bytes */10');assert.equal(await r.text(),'');}
+ r=await mediaResponse(file,request(undefined,'HEAD'));assert.equal(r.headers.get('content-length'),'10');assert.equal(await r.text(),'');assert.deepEqual(fs.readFileSync(file),bytes);
+});

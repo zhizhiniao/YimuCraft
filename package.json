@@ -1,0 +1,35 @@
+{
+  "name": "yimucraft",
+  "version": "0.7.34",
+  "private": true,
+  "description": "一幕 YimuCraft——蒋啊讲出品",
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "test:ui": "node scripts/smoke.cjs",
+    "package": "electron-builder --win dir",
+    "installer": "electron-builder --win nsis --config.directories.output=release/0.7.34",
+    "build:model": "node scripts/build-model-view.cjs",
+    "prepackage": "npm run build:model",
+    "preinstaller": "npm run build:model",
+    "build:brand": "node scripts/build-brand.cjs"
+  },
+  "devDependencies": {
+    "@electron/asar": "4.0.1",
+    "electron": "45.0.0",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
+    "playwright": "1.56.1",
+    "three": "0.186.1"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.8.1",
+    "@napi-rs/canvas": "1.0.13",
+    "ffmpeg-static": "5.3.0",
+    "fontkit": "^2.0.4",
+    "pdfjs-dist": "6.4.299",
+    "yauzl": "^3.2.0",
+    "yazl": "^3.3.1"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "version": "0.7.34",
+  "tag": "v0.7.34-dev.1",
+  "sourceFiles": 69,
+  "asarSHA256": "c95d28a66c87d129ebf8eca0849d9121c3ea7988fa791c6984c09b2f48245653",
+  "installerSHA256": "fa293bcf64731ed692a9d45f3fb1bcb2121f7a03700ef96b1687d41d27d50d1f",
+  "coreTests": {
+    "pass": 72,
+    "fail": 0
+  },
+  "emptyLibraryLaunch": true
+}

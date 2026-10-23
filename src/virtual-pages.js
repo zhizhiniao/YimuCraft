@@ -1,0 +1,21 @@
+// Independent justified-row layout: preserve order and aspect ratios, fill complete rows.
+function justifiedRows(ratios,width,target,gap=12,border=4){
+ const rows=[];let index=0;while(index<ratios.length){const start=index;let sum=0,height=target;
+  while(index<ratios.length){const ratio=Math.max(.2,Math.min(8,ratios[index]||1)),nextSum=sum+ratio,nextCount=index-start+1,nextHeight=(width-gap*(nextCount-1)-border*nextCount)/nextSum;
+   if(nextHeight<target&&index>start){const previous=(width-gap*(nextCount-2)-border*(nextCount-1))/sum;if(Math.abs(previous-target)<Math.abs(nextHeight-target))break;}
+   sum=nextSum;index++;height=nextHeight;if(height<=target)break;
+  }
+  const count=index-start,last=index===ratios.length;height=Math.max(1,last?Math.min(target,height):height);rows.push({start,count,height,widths:ratios.slice(start,index).map(r=>Math.floor((Math.max(.2,Math.min(8,r||1))*height+border)*100)/100)});
+ }return rows;
+}
+class VirtualPages{
+ constructor(grid,viewport,createCard){this.grid=grid;this.viewport=viewport;this.createCard=createCard;this.pages=[];this.items=[];this.ratios=new Map();this.observer=new IntersectionObserver(entries=>{for(const e of entries){const page=this.pages[Number(e.target.dataset.page)];if(!page)continue;if(e.isIntersecting)this.mount(page);else this.unmount(page);}},{root:viewport,rootMargin:'900px 0px'});this.resize=new ResizeObserver(()=>{const width=grid.clientWidth;if(width!==this.lastWidth){this.lastWidth=width;this.layoutAll();}for(const page of this.pages)if(page.mounted)page.height=page.node.getBoundingClientRect().height;});this.resize.observe(grid);for(const event of ['load','loadedmetadata'])grid.addEventListener(event,e=>{const node=e.target.closest('.asset-page');if(node)this.schedule(this.pages[Number(node.dataset.page)]);},true);}
+ setItems(items){const append=items.length>this.items.length&&this.items.length>0&&items[0]===this.items[0];if(!append){this.observer.disconnect();for(const p of this.pages)this.dispose(p);this.grid.replaceChildren();this.pages=[];this.viewport.scrollTop=0;}this.items=items;for(let offset=append?this.pages.length*100:0;offset<items.length;offset+=100){const node=document.createElement('div');node.className='asset-page';node.dataset.page=this.pages.length;const page={node,items:items.slice(offset,offset+100),mounted:false,height:0};this.pages.push(page);this.grid.append(node);this.mount(page);this.observer.observe(node);}}
+ schedule(page){if(!page||page.scheduled)return;page.scheduled=true;requestAnimationFrame(()=>{page.scheduled=false;if(page.mounted&&page.node.isConnected)this.layout(page);});}
+ layoutAll(){for(const page of this.pages)this.schedule(page);}
+ layout(page){const cards=[...page.node.children];if(this.viewport.classList.contains('list')){for(const card of cards){card.style.width='';card.querySelector('.media').style.height='';}page.node.dataset.layout='list';return;}const width=page.node.clientWidth;if(!width)return;const target=parseFloat(getComputedStyle(this.grid).getPropertyValue('--card-width'))||220;const ratios=cards.map(card=>{const media=card.querySelector('.media>img,.media>video,.media>canvas'),w=media?.naturalWidth||media?.videoWidth||media?.width,h=media?.naturalHeight||media?.videoHeight||media?.height;if(w&&h)this.ratios.set(card.title,w/h);return this.ratios.get(card.title)||1;});for(const row of justifiedRows(ratios,width,target)){for(let i=0;i<row.count;i++){const card=cards[row.start+i];card.style.width=row.widths[i]+'px';card.querySelector('.media').style.height=row.height+'px';}}page.node.dataset.layout='justified';page.height=page.node.getBoundingClientRect().height;}
+ mount(page){if(page.mounted)return;page.node.style.height='';page.node.replaceChildren(...page.items.map(this.createCard));page.mounted=true;this.layout(page);this.schedule(page);}
+ dispose(page){for(const card of page.node.querySelectorAll('.asset'))card.onmouseleave?.();for(const media of page.node.querySelectorAll('video,audio')){media.pause();media.removeAttribute('src');media.load();}}
+ unmount(page){if(!page.mounted)return;page.height=page.node.getBoundingClientRect().height;if(!page.height)return;this.dispose(page);page.node.style.height=page.height+'px';page.node.replaceChildren();page.mounted=false;}
+}
+if(typeof module!=='undefined')module.exports={justifiedRows};

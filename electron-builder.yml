@@ -1,0 +1,29 @@
+appId: com.yimucraft.desktop
+productName: YimuCraft
+asar: true
+npmRebuild: false
+directories:
+  output: release
+files:
+  - src/**/*
+  - package.json
+  - '!node_modules/onnxruntime-node/bin/napi-v3/darwin/**/*'
+  - '!node_modules/onnxruntime-node/bin/napi-v3/linux/**/*'
+  - '!node_modules/onnxruntime-node/bin/napi-v3/win32/arm64/**/*'
+win:
+  target: dir
+  signAndEditExecutable: true
+  icon: src/app.ico
+
+asarUnpack:
+  - node_modules/ffmpeg-static/ffmpeg.exe
+  - node_modules/onnxruntime-node/bin/**/*
+  - node_modules/@img/**/*
+  - node_modules/@napi-rs/**/*
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  runAfterFinish: false
+  shortcutName: 一幕 YimuCraft

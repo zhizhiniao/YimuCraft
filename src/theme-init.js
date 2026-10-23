@@ -1,0 +1,1 @@
+(()=>{let theme='system';try{theme=localStorage.getItem('theme')||'system';}catch{}document.documentElement.dataset.theme=(theme==='dark'||theme==='system'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';})();

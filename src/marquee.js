@@ -1,0 +1,16 @@
+// Blank-space drag selects cards; dragging a card keeps native file drag behavior.
+function installMarquee(viewport,grid,getSelected,setSelected){
+ viewport.tabIndex=-1;
+ let drag=null,frame=0;const box=document.createElement('div');box.className='selection-marquee';box.hidden=true;document.body.append(box);
+ function geometry(){const r=viewport.getBoundingClientRect();return {r,x:drag.clientX-r.left+viewport.scrollLeft,y:drag.clientY-r.top+viewport.scrollTop};}
+ function update(){if(!drag)return;const {r,x,y}=geometry(),left=Math.min(drag.x,x),top=Math.min(drag.y,y),right=Math.max(drag.x,x),bottom=Math.max(drag.y,y);
+  for(const card of grid.querySelectorAll('.asset')){const c=card.getBoundingClientRect();drag.bounds.set(Number(card.dataset.id),{left:c.left-r.left+viewport.scrollLeft,right:c.right-r.left+viewport.scrollLeft,top:c.top-r.top+viewport.scrollTop,bottom:c.bottom-r.top+viewport.scrollTop});}
+  const selected=new Set(drag.base);for(const [id,c] of drag.bounds)if(c.left<right&&c.right>left&&c.top<bottom&&c.bottom>top){if(drag.toggle&&drag.base.has(id))selected.delete(id);else selected.add(id);}setSelected(selected);
+  const l=Math.max(r.left,r.left+left-viewport.scrollLeft),t=Math.max(r.top,r.top+top-viewport.scrollTop),rr=Math.min(r.right,r.left+right-viewport.scrollLeft),bb=Math.min(r.bottom,r.top+bottom-viewport.scrollTop);Object.assign(box.style,{left:l+'px',top:t+'px',width:Math.max(0,rr-l)+'px',height:Math.max(0,bb-t)+'px'});box.hidden=false;
+ }
+ function tick(){if(!drag?.active)return;const r=viewport.getBoundingClientRect(),delta=drag.clientY<r.top+28?-14:drag.clientY>r.bottom-28?14:0;if(delta)viewport.scrollTop+=delta;update();frame=requestAnimationFrame(tick);}
+ function finish(cancel=false){if(!drag)return;if(cancel)setSelected(drag.original);if(viewport.hasPointerCapture(drag.pointer))viewport.releasePointerCapture(drag.pointer);drag=null;cancelAnimationFrame(frame);box.hidden=true;document.body.classList.remove('marquee-active');}
+ viewport.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('.asset,button,input,select,textarea,a')||e.clientX>=viewport.getBoundingClientRect().left+viewport.clientWidth)return;const r=viewport.getBoundingClientRect(),original=new Set(getSelected());drag={pointer:e.pointerId,x:e.clientX-r.left+viewport.scrollLeft,y:e.clientY-r.top+viewport.scrollTop,clientX:e.clientX,clientY:e.clientY,startX:e.clientX,startY:e.clientY,base:e.ctrlKey||e.metaKey||e.shiftKey?original:new Set(),original,toggle:e.ctrlKey||e.metaKey,bounds:new Map(),active:false};viewport.focus({preventScroll:true});viewport.setPointerCapture(e.pointerId);e.preventDefault();});
+ viewport.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.pointer)return;drag.clientX=e.clientX;drag.clientY=e.clientY;if(!drag.active&&Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>4){drag.active=true;document.body.classList.add('marquee-active');tick();}});
+ viewport.addEventListener('pointerup',()=>{if(drag&&!drag.active)setSelected(drag.base);finish();});viewport.addEventListener('pointercancel',()=>finish(true));window.addEventListener('blur',()=>finish(true));document.addEventListener('keydown',e=>{if(e.key==='Escape'&&drag){e.preventDefault();e.stopImmediatePropagation();finish(true);}},true);
+}

@@ -1,0 +1,2 @@
+const fs=require('fs'),path=require('path');
+module.exports=function(folder){require('./model-texture-fixture.cjs')(folder);fs.writeFileSync(path.join(folder,'materials.mtl'),'newmtl painted\nKd 1 1 1\nKs 0 0 0\nmap_Kd 贴图 彩.png\n');const file=path.join(folder,'彩色模型.obj');fs.writeFileSync(file,'mtllib materials.mtl\nv -1 -1 0\nv 1 -1 0\nv 1 1 0\nv -1 1 0\nvt 0 0\nvt 1 0\nvt 1 1\nvt 0 1\nusemtl painted\nf 1/1 2/2 3/3\nf 1/1 3/3 4/4\n');return file;};

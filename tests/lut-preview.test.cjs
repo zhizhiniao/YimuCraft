@@ -1,0 +1,15 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {parse,sample}=require('../src/lut-preview.cjs'),{generate}=require('../src/media-preview.cjs'),{hash,Library}=require('../src/library.cjs');
+function cube(invert=false){let text='TITLE "Independent test"\nLUT_3D_SIZE 2\n';for(let b=0;b<2;b++)for(let g=0;g<2;g++)for(let r=0;r<2;r++)text+=[r,g,b].map(x=>invert?1-x:x).join(' ')+'\n';return text;}
+test('CUBE interpolation respects red-fastest order, independent channels, domains and malformed input',()=>{
+ for(const invert of [false,true]){const p=parse(cube(invert));for(const rgb of [[0,0,0],[1,0,0],[.13,.47,.89]])sample(p,rgb).forEach((v,i)=>assert.ok(Math.abs(v-(invert?1-rgb[i]:rgb[i]))<1e-6));}
+ const one=parse('LUT_1D_SIZE 2\nDOMAIN_MIN -1 -1 -1\nDOMAIN_MAX 1 1 1\n0 0 0\n1 1 1');assert.deepEqual(sample(one,[-2,0,2]),[0,.5,1]);
+ for(const text of ['LUT_3D_SIZE 1000','LUT_3D_SIZE 2\n0 0 0','LUT_1D_SIZE 2\nLUT_3D_SIZE 2',cube()+'0 0 NaN',cube()+'DOMAIN_MIN 2 0 0'])assert.throws(()=>parse(text));
+});
+test('actual LUT preview transforms reference pixels and persists after source removal and package migration',async()=>{
+ const root=fs.mkdtempSync(path.resolve('work/lut-unit-')),file=path.join(root,'source','反相.cube'),reference=path.join(root,'参考.png'),{createCanvas,loadImage}=require('@napi-rs/canvas');fs.mkdirSync(path.dirname(file));fs.writeFileSync(file,cube(true));const c=createCanvas(8,4),ctx=c.getContext('2d');ctx.fillStyle='#ff0000';ctx.fillRect(0,0,8,4);fs.writeFileSync(reference,c.toBuffer('image/png'));const before=await hash(file),result=await generate({path:file,kind:'lut',referenceImage:reference},path.join(root,'previews'));const image=await loadImage(result.cover),out=createCanvas(image.width,image.height),x=out.getContext('2d');x.drawImage(image,0,0);assert.deepEqual([...x.getImageData(2,2,1,1).data],[255,0,0,255]);assert.deepEqual([...x.getImageData(10,2,1,1).data],[0,255,255,255]);assert.equal(await hash(file),before);
+ const lib=new Library(path.join(root,'library'));try{await lib.importPaths([file]);const row=lib.query().items[0];assert.equal(row.kind,'lut');lib.setCover(row.id,result.cover);await lib.exportPackage([row.id],path.join(root,'pack'));}finally{lib.close();}
+ fs.renameSync(file,file+'.offline');fs.renameSync(reference,reference+'.offline');fs.renameSync(result.cover,result.cover+'.offline');const destination=path.join(root,'destination');let next=new Library(destination);try{await next.importOwnedPackage(path.join(root,'pack'));assert.equal(await hash(next.query().items[0].path),before);}finally{next.close();}next=new Library(destination);try{const row=next.query().items[0];assert.equal(row.kind,'lut');assert.ok(fs.existsSync(row.cover));}finally{next.close();}
+ const bad=path.join(root,'bad.cube');fs.writeFileSync(bad,'LUT_3D_SIZE 2');const dirs=fs.readdirSync(path.join(root,'previews'));await assert.rejects(()=>generate({path:bad,kind:'lut'},path.join(root,'previews')),/行数/);assert.deepEqual(fs.readdirSync(path.join(root,'previews')),dirs);
+});
+module.exports={cube};
