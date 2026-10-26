@@ -19,7 +19,7 @@ parentPort.on('message',async ({id,command,args=[]})=>{
     else if(command==='aiTag')result=await semantic.tag(library,args[0],args[1],report,()=>cancelled);
     else if(command==='moveFolder')result=await library.moveFolder(args[0],args[1],{...args[2],report});
     else if(command==='importManaged')result=await library.importManaged(args[0],report,()=>cancelled,args[1]);
-    else if(command==='importPaths')result=await library.importPaths(args[0],report,()=>cancelled);
+    else if(command==='importPaths')result=await library.importPaths(args[0],report,()=>cancelled,args[1]);
     else if(command==='indexVisual')result=await library.indexVisual(report,()=>cancelled);
     else if(command==='duplicates')result=await library.duplicates(report,()=>cancelled);
     else if(command==='importAetodo')result=await library.importAetodo(args[0],report);

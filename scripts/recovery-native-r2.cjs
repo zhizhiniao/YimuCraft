@@ -1,0 +1,20 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {evaluate,host}=require('./pr-test-control.cjs'),{PremiereBridge}=require('../src/premiere-bridge.cjs');
+const out=path.resolve('evidence/recovery-20261023-r2/pr-native.json'),report={checks:[]};
+(async()=>{let wrapped=false;try{
+ const project=await host('app.project.path');assert.ok(project.replace(/\\/g,'/').includes('/work/recovery-native-r2/'));report.project=project;
+ const before=Number(await host('app.project.rootItem.children.numItems'));report.before=before;
+ const file=path.resolve('work/recovery-native-r2/timeout-'+Date.now()+'.png'),canvas=require('@napi-rs/canvas').createCanvas(32,32);canvas.getContext('2d').fillRect(0,0,32,32);fs.writeFileSync(file,canvas.toBuffer('image/png'));
+ await evaluate(`(function(){window.__recoveryOriginal=window.__adobe_cep__.evalScript;window.__recoveryCalls=0;window.__adobe_cep__.evalScript=function(s,cb){if(s.indexOf('"operation":"import"')>=0){window.__recoveryCalls++;return window.__recoveryOriginal.call(this,s,function(r){window.__recoveryHeld=function(){cb(r);};});}return window.__recoveryOriginal.call(this,s,cb);};return true;})()`);wrapped=true;
+ const bridge=new PremiereBridge(undefined,{timeout:2500,poll:100});assert.equal(bridge.pending(),null);
+ await assert.rejects(bridge.run('import',{paths:[file]}),/已锁定/);
+ assert.equal(await evaluate('typeof window.__recoveryHeld'),'function');
+ const restarted=new PremiereBridge();await assert.rejects(restarted.run('import',{paths:[file]}),/待确认/);
+ assert.equal(Number(await host('app.project.rootItem.children.numItems')),before+1);
+ await evaluate('window.__recoveryHeld();true');assert.equal(restarted.pending().receipt.ok,true);
+ await assert.rejects(restarted.run('import',{paths:[file]}),/待确认/);restarted.resolvePending();
+ await restarted.run('inspect');assert.equal(await evaluate('window.__recoveryCalls'),1);
+ await host('app.project.save();"saved"');
+ assert.equal(Number(await host('app.project.rootItem.children.numItems')),before+1);
+ report.after=before+1;report.checks.push('native import completed once while callback held','timeout persists across bridge restart and rejects duplicate','late receipt stays locked until explicit acknowledgement','acknowledgement never replays; project saved');report.passed=true;
+ }catch(e){report.error=e.stack;report.passed=false;process.exitCode=1;}finally{if(wrapped)await evaluate('window.__adobe_cep__.evalScript=window.__recoveryOriginal;delete window.__recoveryHeld;true').catch(()=>{});fs.writeFileSync(out,JSON.stringify(report,null,2));console.log(report);}})();

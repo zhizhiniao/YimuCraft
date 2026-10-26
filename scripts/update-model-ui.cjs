@@ -1,0 +1,9 @@
+const fs=require('fs');
+const p='src/model-ui.js';let s=fs.readFileSync(p,'utf8');
+s=s.replace("['kimi','Kimi','K','openai','https://api.moonshot.cn/v1']","['kimi','Kimi','kimi','openai','https://api.moonshot.cn/v1'],['minimax','MiniMax','minimax','openai','https://api.minimax.cn/v1']");
+s=s.replace('badge.textContent=icon;',"const logo=document.createElement('img');logo.src='logos/'+id+'.png';logo.alt=name;badge.append(logo);");
+s=s.replace('function toolbar(){',"function toolbar(){const select=$('modelQuickSwitch');select.replaceChildren(...info.providers.map(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name.replace(/（.*）/,'')+' · '+p.model;return o;}));select.value=info.active;select.hidden=!info.providers.length;");
+s=s.replace("$('modelsEntry').onclick=","$('modelQuickSwitch').onchange=async e=>{const id=e.target.value;try{info=await command('modelSelect',id);toolbar();status('当前模型：'+info.providers.find(p=>p.id===id).model);}catch(err){toolbar();status(err.message);}}; $('modelsEntry').onclick=");fs.writeFileSync(p,s);
+const h='src/index.html';fs.writeFileSync(h,fs.readFileSync(h,'utf8').replace('<button id="themeToggle"','<select id="modelQuickSwitch" aria-label="切换当前大模型" title="切换当前大模型" hidden></select><button id="themeToggle"'));
+const a='src/agent-ui.js';s=fs.readFileSync(a,'utf8').replace('icon.textContent=c.icon;',"const logo=document.createElement('img');logo.src='logos/'+({'claude-code':'anthropic','claude-desktop':'anthropic','kimi-code':'kimi','harness':'deepseek','codex':'openai'}[c.id]||c.id)+'.png';logo.alt=c.name;icon.append(logo);");fs.writeFileSync(a,s);
+fs.appendFileSync('src/style.css','\n.connect-icon img{width:32px;height:32px;object-fit:contain}.connect-icon{background:#fff;border-radius:9px}#modelQuickSwitch{max-width:240px;min-width:120px;margin-right:6px}#modelsEntry #modelEntryStatus{display:none}\n');

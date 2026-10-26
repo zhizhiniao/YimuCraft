@@ -1,0 +1,5 @@
+const fs=require('fs'),path=require('path'),{AdobeBridge}=require('../src/adobe-bridge.cjs'),{PremiereBridge}=require('../src/premiere-bridge.cjs');
+const out=path.resolve('evidence/usability-20261023-r1/adobe-'+Date.now()+'.json');
+(async()=>{const report={time:new Date().toISOString()};const b=new AdobeBridge(path.resolve('work/usability-ae-bridge'),{timeout:15000});const old=fs.existsSync(b.rendezvous)?fs.readFileSync(b.rendezvous):null;try{const live=b.liveState();report.aeLive=live;if(!live)throw Error('AE startup heartbeat unavailable; no blind host launch');let first=true;const read=b.liveState.bind(b);b.liveState=()=>{if(first){first=false;return null;}return read();};report.ae=await b.run('inspect');}catch(e){report.aeError=e.message;}finally{if(old)fs.writeFileSync(b.rendezvous,old);}
+ try{report.pr=await new PremiereBridge(undefined,{timeout:10000}).run('inspect');}catch(e){report.prError=e.message;}
+ fs.writeFileSync(out,JSON.stringify(report,null,2));console.log(JSON.stringify({out,ae:report.ae?.ok,aeError:report.aeError,pr:report.pr?.ok,prError:report.prError}));})();

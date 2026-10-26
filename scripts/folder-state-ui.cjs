@@ -1,0 +1,27 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {electron}=require('./test-app.cjs'),close=require('./close-test-app.cjs');
+const root=path.resolve('work','folder-state-'+Date.now()),out=path.resolve('evidence/folder-state-20261023',path.basename(root));
+fs.mkdirSync(out,{recursive:true});const report={out,executable:process.env.YIMU_TEST_EXE||'source',checks:[],errors:[]};
+(async()=>{let app;try{
+ const {Library}=require('../src/library.cjs'),lib=new Library(path.join(root,'db'));
+ const parent=await lib.createFolder('','父级文件夹'),child=await lib.createFolder(parent.path,'子级文件夹');await lib.createFolder(child.path,'孙级文件夹');await lib.createFolder('','同级文件夹');lib.close();
+ const env={...process.env,YIMU_DATA_DIR:path.join(root,'db')};delete env.ELECTRON_RUN_AS_NODE;
+ const launch=async()=>{app=await electron.launch({...(process.env.YIMU_TEST_EXE?{executablePath:process.env.YIMU_TEST_EXE,args:[]}:{args:['.']}),cwd:process.cwd(),env});const p=await app.firstWindow();p.on('pageerror',e=>report.errors.push(e.message));await p.waitForFunction(()=>document.querySelector('#status')?.textContent.startsWith('就绪'));await app.evaluate(({Menu})=>{const build=Menu.buildFromTemplate.bind(Menu);Menu.buildFromTemplate=t=>{const m=build(t);m.popup=()=>{globalThis.__menu=m;};return m;};});return p;};
+ const menu=async(p,selector,position)=>{await app.evaluate(()=>globalThis.__menu=null);await p.locator(selector).click({button:'right',...(position?{position}:{})});for(let i=0;i<100;i++){if(await app.evaluate(()=>!!globalThis.__menu))return;await new Promise(r=>setTimeout(r,25));}throw Error('No menu at '+selector);};
+ const choose=label=>app.evaluate((_,label)=>{const item=globalThis.__menu.items.find(i=>i.label===label);if(!item)throw Error(label);item.click();},label);
+ const rows=(p,n)=>p.waitForFunction(n=>document.querySelectorAll('#folders .folder-row').length===n,n);
+ let page=await launch();await rows(page,4);
+ await menu(page,'.folder-heading span');await choose('折叠全部文件夹');await rows(page,2);
+ await close(app);page=await launch();await rows(page,2);report.checks.push('heading blank menu: collapse all and full-process restart preserves two root rows');
+ await page.locator('.folder-toggle').first().click();await rows(page,3);
+ await close(app);page=await launch();await rows(page,3);report.checks.push('mixed parent-expanded / child-collapsed state survives process restart');
+ await menu(page,'.folder-row:nth-child(2)',{x:2,y:10});await choose('展开全部文件夹');await rows(page,4);
+ await close(app);page=await launch();await rows(page,4);report.checks.push('row indentation menu and explicit expand-all survive restart (empty saved array)');
+ await page.locator('#folderSearch').fill('同级');await rows(page,1);
+ await menu(page,'#folders',{x:100,y:200});await choose('折叠全部文件夹');await page.locator('#folderSearch').fill('');await rows(page,2);report.checks.push('collapse-all while filtered also collapses nonmatching hidden branches');
+ await menu(page,'.folder-row:first-child .folder');const labels=await app.evaluate(()=>globalThis.__menu.items.map(i=>i.label));assert.ok(labels.includes('重命名'));assert.ok(!labels.includes('折叠全部文件夹'));report.checks.push('folder button retains existing folder-specific context menu');
+ const isolation=await page.evaluate(()=>{const original=state.stats.location,oldKey=state.folderStateKey;state.stats.location=original+'-another';restoreFolderState();const fresh=state.collapsed.size;state.stats.location=original;restoreFolderState();return {fresh,restored:state.collapsed.size,same:oldKey===state.folderStateKey};});assert.deepEqual(isolation,{fresh:0,restored:2,same:true});report.checks.push('per-library state isolation');
+ await page.screenshot({path:path.join(out,'collapsed.png')});
+ await page.evaluate(()=>localStorage.setItem(state.folderStateKey,'invalid json'));await page.reload();await page.waitForFunction(()=>document.querySelector('#status')?.textContent.startsWith('就绪'));await rows(page,4);report.checks.push('corrupt persisted state falls back without breaking startup');
+ assert.deepEqual(report.errors,[]);report.passed=true;
+ }catch(e){report.passed=false;report.error=e.stack;process.exitCode=1;}finally{await close(app).catch(()=>{});fs.writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}})();

@@ -1,0 +1,23 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto'),asar=require('@electron/asar');
+const {electron}=require('./test-app.cjs'),close=require('./close-test-app.cjs');
+const out=path.resolve('evidence/folder-state-20261023','real-'+Date.now());fs.mkdirSync(out,{recursive:true});let app;const report={out};
+(async()=>{try{
+ const exe=path.join(process.env.LOCALAPPDATA,'Programs/YimuCraft/YimuCraft.exe'),archive=path.join(path.dirname(exe),'resources/app.asar');
+ const hash=b=>crypto.createHash('sha256').update(b).digest('hex');const files=fs.readdirSync('src',{recursive:true}).filter(n=>fs.statSync(path.join('src',n)).isFile());for(const n of files)assert.equal(hash(fs.readFileSync(path.join('src',n))),hash(asar.extractFile(archive,path.join('src',n))),n);report.filesMatched=files.length;
+ const env={...process.env};delete env.YIMU_DATA_DIR;delete env.ELECTRON_RUN_AS_NODE;
+ const launch=async()=>{app=await electron.launch({executablePath:exe,args:[],env});const p=await app.firstWindow();p.setDefaultTimeout(60000);await p.waitForFunction(()=>document.querySelector('#status')?.textContent.startsWith('就绪'),null,{timeout:60000});return p;};
+ let p=await launch();report.profile=await app.evaluate(({app})=>app.getPath('userData'));report.version=await app.evaluate(({app})=>app.getVersion());assert.equal(report.version,'0.7.51');
+ report.total=Number(await p.locator('#total').textContent());assert.equal(report.total,65586);
+ report.rowsBefore=await p.locator('.folder-row').count();
+ await app.evaluate(({Menu})=>{const build=Menu.buildFromTemplate.bind(Menu);Menu.buildFromTemplate=t=>{const m=build(t);m.popup=()=>{globalThis.__menu=m;};return m;};});
+ await p.locator('.folder-heading span').click({button:'right'});
+ for(let i=0;i<100&&!await app.evaluate(()=>!!globalThis.__menu);i++)await new Promise(r=>setTimeout(r,25));
+ report.menu=await app.evaluate(()=>globalThis.__menu.items.map(i=>i.label));
+ await app.evaluate(()=>globalThis.__menu.items.find(i=>i.label==='折叠全部文件夹').click());
+ await p.waitForFunction(()=>document.querySelector('#status').textContent==='已折叠全部文件夹');
+ report.collapsed=await p.evaluate(()=>({paths:[...state.collapsed].sort(),rows:document.querySelectorAll('.folder-row').length}));
+ await p.locator('.sidebar').screenshot({path:path.join(out,'collapsed-sidebar.png')});
+ await close(app);app=null;p=await launch();
+ const restored=await p.evaluate(()=>({paths:[...state.collapsed].sort(),rows:document.querySelectorAll('.folder-row').length}));assert.deepEqual(restored,report.collapsed);report.restartPreserved=true;
+ await p.locator('.sidebar').screenshot({path:path.join(out,'restarted-sidebar.png')});report.passed=true;
+ }catch(e){report.error=e.stack;report.passed=false;process.exitCode=1;}finally{await close(app).catch(()=>{});fs.writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,collapsed:report.collapsed?{rows:report.collapsed.rows,count:report.collapsed.paths.length}:null},null,2));}})();

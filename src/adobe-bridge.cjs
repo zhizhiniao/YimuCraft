@@ -22,10 +22,10 @@ class AdobeBridge{
     if(this.unresolved){if(fs.existsSync(this.unresolved.receipt)||this.unresolved.exited)this.unresolved=null;else throw Error('上一项 AE 请求尚未结束，请先处理 AE 窗口中的提示。请求：'+this.unresolved.id);}
     if(this.pending)throw Error('AE 正在执行上一项操作，请等待回执');
     if(!this.executable||!fs.existsSync(this.executable))throw Error('未找到 AfterFX.exe，请在 AE 连接设置中选择程序');
-    if(!['inspect','import','collectFile','verifyFile','fixture','font','preset','script'].includes(operation))throw Error('不支持的 AE 操作');
+    if(!['inspect','import','collectFile','verifyFile','inspectFile','renderPreview','fixture','font','preset','script'].includes(operation))throw Error('不支持的 AE 操作');
     this.pending=true;
     try{
-      const isolated=['collectFile','verifyFile','fixture'].includes(operation);
+      const isolated=['collectFile','verifyFile','inspectFile','renderPreview','fixture'].includes(operation);
       // Isolated requests live in a subfolder so the live-AE startup server, which
       // only lists *.jsx in the bridge root, can never race them.
 

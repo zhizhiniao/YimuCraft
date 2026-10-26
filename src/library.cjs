@@ -28,7 +28,7 @@ class Library {
   constructor(folder) {
     this.folder = normalize(folder); fs.mkdirSync(this.folder,{recursive:true});
     this.db = new DatabaseSync(path.join(this.folder,'library.sqlite'));
-    this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
+    try{require('./schema-migration.cjs').migrate(this.db,this.folder,()=>{this.db.exec(`
       CREATE TABLE IF NOT EXISTS assets(id INTEGER PRIMARY KEY, path TEXT NOT NULL, path_key TEXT UNIQUE NOT NULL, name TEXT NOT NULL, ext TEXT NOT NULL, kind TEXT NOT NULL, folder TEXT NOT NULL, size INTEGER NOT NULL, modified REAL NOT NULL, added REAL NOT NULL, cover TEXT, preview TEXT, tags TEXT NOT NULL DEFAULT '[]', rating INTEGER NOT NULL DEFAULT 0, favorite INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', hidden INTEGER NOT NULL DEFAULT 0);
       CREATE INDEX IF NOT EXISTS assets_folder ON assets(folder); CREATE INDEX IF NOT EXISTS assets_kind ON assets(kind);
       CREATE TABLE IF NOT EXISTS roots(path TEXT PRIMARY KEY);
@@ -44,21 +44,25 @@ class Library {
     this.db.exec('CREATE TABLE IF NOT EXISTS file_identity(asset INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,identity TEXT)');
     this.db.exec("CREATE TABLE IF NOT EXISTS folder_preferences(path TEXT PRIMARY KEY,icon TEXT NOT NULL DEFAULT '▱')");
     for(const table of ['folder_preferences','collections'])for(const [column,defaultValue] of [['icon','folder'],['color','']])if(!this.db.prepare('PRAGMA table_info('+table+')').all().some(x=>x.name===column))this.db.exec("ALTER TABLE "+table+" ADD COLUMN "+column+" TEXT NOT NULL DEFAULT '"+defaultValue+"'");
+    this.db.exec("CREATE UNIQUE INDEX IF NOT EXISTS unique_folder_type ON folder_preferences(icon) WHERE icon IN ('type-pr','type-ae','type-ps','type-audio')");
     this.db.exec('CREATE TABLE IF NOT EXISTS import_sources(source TEXT NOT NULL,digest TEXT NOT NULL,asset INTEGER REFERENCES assets(id) ON DELETE CASCADE,stored_digest TEXT NOT NULL)');
     this.db.exec('CREATE INDEX IF NOT EXISTS import_sources_lookup ON import_sources(source,digest)');
     this.db.exec('CREATE INDEX IF NOT EXISTS import_sources_asset ON import_sources(asset)');
-    for(const [type,extensions] of Object.entries(groups))this.db.prepare("UPDATE assets SET kind=?,cover=CASE WHEN ?='image' THEN COALESCE(cover,path) ELSE cover END WHERE kind='other' AND ext IN (SELECT value FROM json_each(?))").run(type,type,JSON.stringify(extensions));
+
     this.db.exec('CREATE TABLE IF NOT EXISTS semantic_features(asset INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,signature TEXT NOT NULL,model TEXT NOT NULL,vector BLOB NOT NULL)');
     this.db.exec('CREATE TABLE IF NOT EXISTS visual_features(asset INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,signature TEXT NOT NULL,pixels TEXT NOT NULL)');
-    try{require('./trash.cjs').recover(this);}catch(e){this.db.close();throw e;}
+    });this.db.exec('PRAGMA journal_mode=WAL; BEGIN;');
+    for(const [type,extensions] of Object.entries(groups))this.db.prepare("UPDATE assets SET kind=?,cover=CASE WHEN ?='image' THEN COALESCE(cover,path) ELSE cover END WHERE kind='other' AND ext IN (SELECT value FROM json_each(?))").run(type,type,JSON.stringify(extensions));
+this.db.exec('COMMIT');require('./trash.cjs').recover(this);}catch(e){this.db.close();throw e;}
   }
   async removePermanent(ids,report){return require('./trash.cjs').remove(this,ids,report);}
   async synchronize(beforeApply){return require('./file-sync.cjs').synchronize(this,beforeApply);}
-  async createFolder(parent,name){return require('./folders.cjs').createFolder(this,parent,name);}
+  async createFolder(parent,name,type=''){return require('./folders.cjs').createFolder(this,parent,name,type);}
   async removeEmptyFolder(folder){return require('./folders.cjs').removeEmptyFolder(this,folder);}
   setFolderIcon(folder,icon){const old=this.db.prepare('SELECT color FROM folder_preferences WHERE path=?').get(folder);const result=this.setFolderAppearance(folder,{icon,color:old?.color||''});this.db.prepare('UPDATE folder_preferences SET icon=? WHERE path=?').run(icon,result.path);return result;}
-  setFolderAppearance(folder,value){const a=appearance.normalize(value);if(typeof folder!=='string'||!path.isAbsolute(folder))throw Error('文件夹路径无效');folder=path.resolve(folder);const prefix=folder.endsWith(path.sep)?folder:folder+path.sep;const known=this.db.prepare('SELECT 1 FROM assets WHERE lower(folder)=lower(?) OR substr(lower(folder),1,?)=lower(?) LIMIT 1').get(folder,prefix.length,prefix)||this.db.prepare('SELECT 1 FROM folder_preferences WHERE path=?').get(folder);const owned=['managed','packages'].some(n=>inside(path.join(this.folder,n),folder))&&fs.existsSync(folder)&&fs.statSync(folder).isDirectory();if(!known&&!owned)throw Error('请选择当前库中的文件夹');this.db.prepare('INSERT INTO folder_preferences(path,icon,color) VALUES(?,?,?) ON CONFLICT(path) DO UPDATE SET icon=excluded.icon,color=excluded.color').run(folder,a.icon,a.color);return {path:folder,...a};}
-  setCollectionAppearance(id,value){const a=appearance.normalize(value);if(!this.db.prepare('SELECT 1 FROM collections WHERE id=?').get(id))throw Error('分类不存在');this.db.prepare('UPDATE collections SET icon=?,color=? WHERE id=?').run(a.icon,a.color,id);return {id,...a};}
+  assertFolderType(icon,folder=''){if(!Object.hasOwn(appearance.folderTypes,icon))return;const existing=this.db.prepare('SELECT path FROM folder_preferences WHERE icon=? AND lower(path)!=lower(?)').get(icon,folder);if(existing)throw Error(appearance.folderTypes[icon][0]+' 类型文件夹已存在：'+existing.path);}
+  setFolderAppearance(folder,value){const a=appearance.normalize(value);this.assertFolderType(a.icon,folder);if(typeof folder!=='string'||!path.isAbsolute(folder))throw Error('文件夹路径无效');folder=path.resolve(folder);const prefix=folder.endsWith(path.sep)?folder:folder+path.sep;const known=this.db.prepare('SELECT 1 FROM assets WHERE lower(folder)=lower(?) OR substr(lower(folder),1,?)=lower(?) LIMIT 1').get(folder,prefix.length,prefix)||this.db.prepare('SELECT 1 FROM folder_preferences WHERE path=?').get(folder);const owned=['managed','packages'].some(n=>inside(path.join(this.folder,n),folder))&&fs.existsSync(folder)&&fs.statSync(folder).isDirectory();if(!known&&!owned)throw Error('请选择当前库中的文件夹');this.db.prepare('INSERT INTO folder_preferences(path,icon,color) VALUES(?,?,?) ON CONFLICT(path) DO UPDATE SET icon=excluded.icon,color=excluded.color').run(folder,a.icon,a.color);return {path:folder,...a};}
+  setCollectionAppearance(id,value){const a=appearance.normalize(value);if(Object.hasOwn(appearance.folderTypes,a.icon))throw Error('类型图标仅用于文件夹');if(!this.db.prepare('SELECT 1 FROM collections WHERE id=?').get(id))throw Error('分类不存在');this.db.prepare('UPDATE collections SET icon=?,color=? WHERE id=?').run(a.icon,a.color,id);return {id,...a};}
   async moveFolder(source,destination,options){return require('./folders.cjs').moveFolder(this,source,destination,options);}
   async importAetodo(file,report){return require('./aetodopack.cjs').importPack(this,file,report);}
   async exportAetodo(ids,destination,report,overrides){return require('./aetodopack.cjs').exportPack(this,ids,destination,report,overrides);}
@@ -82,7 +86,9 @@ class Library {
     if(f.color||f.similarTo)f={...f,visualIds:this.visualSearch(f).map(r=>r.id)};
     const where=['hidden=?'], args=[f.trash ? 1:0];
     if (f.q) { where.push('(name LIKE ? ESCAPE \'\\\' OR tags LIKE ? ESCAPE \'\\\' OR note LIKE ? ESCAPE \'\\\')'); const s='%'+String(f.q).replace(/[\\%_]/g,'\\$&')+'%'; args.push(s,s,s); }
-    if (f.kind) {where.push('kind=?'); args.push(f.kind);}
+    if(f.kind==='pendingAe'){where.push("ext IN ('aep','aepx') AND (preview IS NULL OR preview='')");}else if (f.kind) {where.push('kind=?'); args.push(f.kind);}
+    if(f.effectsOnly&&f.kind!=='pendingAe'&&!f.trash)where.push("(ext NOT IN ('aep','aepx') OR (preview IS NOT NULL AND preview!=''))");
+    if(Array.isArray(f.extensions)&&f.extensions.length){where.push('ext IN (SELECT value FROM json_each(?))');args.push(JSON.stringify(f.extensions));}
     if (f.ext) {where.push('ext=?');args.push(f.ext);}
     if (f.favorite) where.push('favorite=1');
     if (f.note) where.push("note!=''");
@@ -111,7 +117,7 @@ class Library {
   setPreview(id,cover,preview){this.get(id);this.db.prepare('UPDATE assets SET cover_override=?,preview=COALESCE(?,preview) WHERE id=?').run(cover,preview,Number(id));return this.get(id);}
   setCover(id,file){this.get(id);this.db.prepare('UPDATE assets SET cover_override=? WHERE id=?').run(file,Number(id));return this.get(id);}
   async backup(destination){if(fs.existsSync(destination))throw Error('备份文件已存在');const partial=destination+'.partial-'+crypto.randomUUID();try{await require('node:sqlite').backup(this.db,partial);await fsp.rename(partial,destination);return {message:'索引备份已保存（不包含素材原文件）',path:destination};}catch(e){await fsp.rm(partial,{force:true});throw e;}}
-  async importPaths(paths, report=()=>{}, cancelled=()=>false) {
+  async importPaths(paths, report=()=>{}, cancelled=()=>false, options={}) {
     if (!Array.isArray(paths)||!paths.length) throw Error('请选择文件或文件夹');
     let scanned=[],errors=[];
     for (const p of paths) { const root=normalize(p); if (inside(this.folder,root)&&!inside(path.join(this.folder,'packages'),root)&&!inside(path.join(this.folder,'managed'),root)) throw Error('不能导入索引数据库目录'); const result=await walk(root,report,cancelled); scanned.push(...result.files);errors.push(...result.errors); }
@@ -127,6 +133,7 @@ class Library {
     if(ownTransaction)this.db.exec('BEGIN');
     try { for (const f of scanned) {
       if (cancelled()) break;
+      if(options.onlyNew&&this.db.prepare('SELECT id FROM assets WHERE path_key=?').get(key(f.path)))continue;
       const ext=path.extname(f.path).slice(1).toLowerCase(), type=kind(ext), stem=f.path.slice(0,-ext.length-1);
       const bases=[stem,path.join(stem,path.basename(stem))];
       const find=es=>{for(const base of bases) for(const e of es){const p=byPath.get(key(base+'.'+e));if(p&&fs.statSync(p).isFile())return p;}return null;};

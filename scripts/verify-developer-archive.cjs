@@ -7,12 +7,14 @@ const asar = require('@electron/asar');
 const {electron} = require('./test-app.cjs');
 const root = path.resolve(__dirname, '..');
 const version = require('../package.json').version;
-const output = path.join(root, 'evidence', 'developer-archive-20261022');
-const scratch = path.join(root, 'work', 'archive-first-launch');
+// A fresh run keeps previous evidence and never reuses a populated test library.
+const runId = `release-${version}-${Date.now()}`;
+const output = path.join(root, 'evidence', runId);
+const scratch = path.join(root, 'work', runId);
 const release = path.join(root, 'release', version);
 const installed = path.join(process.env.LOCALAPPDATA, 'Programs', 'YimuCraft');
 const digest = data => crypto.createHash('sha256').update(data).digest('hex');
-const report = {version, tag: 'v0.7.34-dev.1', sourceFiles: 0, mismatches: [], passed: false};
+const report = {version, tag: `v${version}-dev.1`, output, sourceFiles: 0, mismatches: [], passed: false};
 fs.mkdirSync(output, {recursive: true});
 const archive = path.join(release, 'win-unpacked', 'resources', 'app.asar');
 async function main() {

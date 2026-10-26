@@ -8,6 +8,7 @@ function assetMenu({ids,first,collections,context={},sendAction}){
  if(one&&first.kind==='video')specialized.push(item('当前帧设为封面','detailAction:coverFrame'));
  if(one&&['ttf','otf'].includes(first.ext))specialized.push(item('安装字体','detailAction:installFont'));
  if(one&&first.kind==='font')specialized.push(item('字体应用 AE','detailAction:fontAe'));
+ if(one&&['aep','aepx'].includes(first.ext))specialized.push(item('生成效果预览…','detailAction:generatePreview'));
  if(one&&['aep','aepx'].includes(first.ext))specialized.push(item('AE 工程检查','detailAction:verifyAe'));
  const organize=[item('批量修改资料','batchEdit'),{label:'添加到分类',enabled:collections.length>0,submenu:collections.map(c=>item(c.name,'assignCollection:'+c.id))}];
  if(Number.isInteger(context.collection))organize.push(item('移出当前分类','unassignCollection'));

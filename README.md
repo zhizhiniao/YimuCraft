@@ -1,14 +1,33 @@
+<p align="center">
+  <img src="docs/images/yimucraft-logo.png" alt="一幕 YimuCraft Logo" width="128" />
+</p>
+
 # 一幕 YimuCraft
 
 **素材随取，灵感成幕。——蒋啊讲出品**
 
 面向视频创作者的 Windows 本地素材管理工具，提供素材整理、媒体预览，以及 After Effects / Premiere Pro 联动。
 
-> 当前归档：**0.7.34 开发者预览版**，标签 `v0.7.34-dev.1`。适合开发和受控试用，尚未完成完整兼容性、干净机器和用户体验验收。
+> 当前下载：**0.7.56 开发者预览版**，标签 `v0.7.56-dev.1`。适合开发和受控试用，尚未完成完整兼容性、干净机器和用户体验验收。
 
-[下载安装包](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.34-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+[下载安装包](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.56-dev.1) · [本版更新与截图](docs/releases/v0.7.56-dev.1.md) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
 
-![0.7.34 开发者版空库界面](docs/images/developer-preview.png)
+![0.7.56 实际运行界面：文件夹、音频波形与媒体预览](docs/images/v0.7.56/library.jpg)
+
+截图来自本机安装版，展示用户已有素材库；安装包不附带画面中的素材、API 配置或智能体权限。
+
+## 本次更新
+
+- **浏览与整理**：文件夹展开状态按库记忆，侧栏更简洁；图标支持软件、自媒体平台、三维格式和自定义颜色。
+- **AI 设置**：统一管理模型 API 与智能体接入；支持本地语义搜索，并可让连接的助手检索素材。
+- **媒体预览**：改进 MOV 兼容预览和音频解码，增加三维格式标识及大文件提示。
+- **可靠性**：增加共享依赖删除保护、索引升级快照和 PR 超时后人工核对流程。
+
+| 模型 API 设置 | 智能体接入 |
+| --- | --- |
+| ![模型服务商与配置](docs/images/v0.7.56/ai-settings.jpg) | ![智能体列表与接入步骤](docs/images/v0.7.56/agents.jpg) |
+
+模型 API 与 MCP 接入是两个独立功能。部分客户端提供手动配置，完整兼容性仍需按客户端验证。更多图标截图及边界见[版本说明](docs/releases/v0.7.56-dev.1.md)。
 
 ## 可以做什么
 
@@ -22,7 +41,7 @@
 
 ## 安装与开始使用
 
-1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.34-dev.1) 下载 `YimuCraft.Setup.0.7.34.exe`。
+1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.56-dev.1) 下载 `YimuCraft.Setup.0.7.56.exe`。
 2. 将安装包放在本机磁盘后运行，按向导完成安装。
 3. 打开“一幕 YimuCraft”，新建素材库或导入文件。首次安装不附带演示素材。
 4. 如需 Adobe 联动，按[使用说明](docs/USAGE.md)安装对应面板。
@@ -34,7 +53,7 @@
 下载页同时提供 `SHA256SUMS.txt`。在 PowerShell 中运行以下命令，将结果与校验文件对照：
 
 ```powershell
-Get-FileHash '.\YimuCraft.Setup.0.7.34.exe' -Algorithm SHA256
+Get-FileHash '.\YimuCraft.Setup.0.7.56.exe' -Algorithm SHA256
 ```
 
 ## 本地开发
@@ -49,7 +68,7 @@ $env:YIMU_DATA_DIR = Join-Path $PWD 'work\dev-library'
 npm start
 ```
 
-私有仓库需要访问权限。`YIMU_DATA_DIR` 将开发数据与日常使用的素材库隔离。
+公开仓库可直接克隆。`YIMU_DATA_DIR` 将开发数据与日常使用的素材库隔离。
 
 | 命令 | 用途 |
 | --- | --- |
@@ -82,10 +101,14 @@ work/                 临时测试数据，不提交 Git
 
 ## 授权与第三方组件
 
-本项目暂未选择开源许可证，当前以私有开发归档维护，不授予额外的复制、修改或分发许可。第三方组件遵循各自许可证，见[第三方说明](THIRD_PARTY_NOTICES.md)。
+本仓库公开展示源码与开发者预览安装包，暂未选择开源许可证；公开可见不代表授予额外的复制、修改或分发许可。第三方组件遵循各自许可证，见[第三方说明](THIRD_PARTY_NOTICES.md)。
 
 YimuCraft 为独立实现项目，与 Adobe、Aetodo 无隶属或背书关系。仓库不包含原版程序包、专有源码和个人素材库。
 
 ## 联系作者
+
+有使用问题、建议反馈，或想加入一幕 YimuCraft 交流群，可以扫码添加我的微信，备注「一幕」。
+
+<img src="docs/images/wechat-contact.png" alt="蒋啊讲的个人微信二维码" width="320" />
 
 公众号：**知鸟PLAN** · 微信：**aizzn2030**

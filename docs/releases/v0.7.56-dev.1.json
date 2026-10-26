@@ -1,0 +1,18 @@
+{
+  "version": "0.7.56",
+  "tag": "v0.7.56-dev.1",
+  "date": "2026-10-25",
+  "sourceFiles": 106,
+  "asarSHA256": "194c8f38dc39e23ba50a140f482ec815a5b0ed800c3f81f9400a644643283d93",
+  "installerSHA256": "cb9b91a94332d7a54e79aab34c70d29dd9c64a11561845df1e133b067d035482",
+  "installerFile": "YimuCraft.Setup.0.7.56.exe",
+  "installerBytes": 199370423,
+  "coreTests": {
+    "pass": 108,
+    "fail": 0
+  },
+  "emptyLibraryLaunch": true,
+  "productionDependencyAdvisories": 0,
+  "screenshotMethod": "Computer Use; installed 0.7.56",
+  "scope": "Developer preview; no clean-machine or full host compatibility acceptance"
+}

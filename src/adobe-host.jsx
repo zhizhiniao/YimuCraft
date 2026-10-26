@@ -8,7 +8,7 @@
     for(i=1;i<=app.project.numItems;i++){item=app.project.item(i);
       if(item instanceof FootageItem&&item.mainSource instanceof FileSource){var f=item.file;files.push({id:item.id,name:item.name,path:f?f.fsName:null,exists:f?f.exists:false,isStill:item.mainSource.isStill,frameRate:item.frameRate});if(!f||!f.exists||item.footageMissing)missing.push(item.name);}
       if(item.proxySource instanceof FileSource){var p=item.proxySource.file;files.push({id:item.id,name:item.name,proxy:true,path:p?p.fsName:null,exists:p?p.exists:false});if(!p||!p.exists)missing.push(item.name+' (proxy)');}
-      if(item instanceof CompItem){comps.push({id:item.id,name:item.name,width:item.width,height:item.height,frameRate:item.frameRate,duration:item.duration,layers:item.numLayers});for(var l=1;l<=item.numLayers;l++){layer=item.layer(l);if(layer instanceof TextLayer){text=layer.property('ADBE Text Properties').property('ADBE Text Document').value;fonts.push(text.font);}}}
+      if(item instanceof CompItem){comps.push({id:item.id,name:item.name,width:item.width,height:item.height,frameRate:item.frameRate,duration:item.duration,layers:item.numLayers,usedIn:item.usedIn.length});for(var l=1;l<=item.numLayers;l++){layer=item.layer(l);if(layer instanceof TextLayer){text=layer.property('ADBE Text Properties').property('ADBE Text Document').value;fonts.push(text.font);}}}
     }var selectedComps=[];for(i=0;i<app.project.selection.length;i++)if(app.project.selection[i] instanceof CompItem)selectedComps.push(app.project.selection[i].id);if(!selectedComps.length&&app.project.activeItem instanceof CompItem)selectedComps.push(app.project.activeItem.id);return {version:app.version,project:app.project.file?app.project.file.fsName:null,dirty:app.project.dirty,selectedCompIds:selectedComps,items:app.project.numItems,files:files,comps:comps,fonts:fonts,missing:missing};
   }
   function openIsolated(file){if(!request.isolated)throw Error('Requires isolated AE process');if(app.project&&app.project.file&&same(app.project.file.fsName,file)){reusedOpenProject=true;return;}if(app.project&&(app.project.file||app.project.numItems))throw Error('Isolated session contains a project; refusing to replace it');var f=new File(file);if(!f.exists)throw Error('Project does not exist: '+file);app.open(f);}
@@ -54,6 +54,17 @@
     }else if(request.operation==='script'){
       var script=new File(p.path);if(!script.exists||!/\.(jsx|jsxbin)$/i.test(p.path))throw Error('AE 脚本不存在');$.evalFile(script);result={script:script.fsName,completed:true};
     }else if(request.operation==='collectFile')result=collect(p);
+    else if(request.operation==='renderPreview'){
+      openIsolated(p.project);var info=projectInfo();if(info.missing.length)throw Error('Missing footage: '+info.missing.join(', '));
+      var target=app.project.itemByID(p.compId);if(!(target instanceof CompItem))throw Error('Composition not found');
+      while(app.project.renderQueue.numItems)app.project.renderQueue.item(1).remove();
+      var factor=Math.max(1,Math.ceil(target.width/960));target.resolutionFactor=[factor,factor];target.bgColor=[0,0,0];
+      var rq=app.project.renderQueue.items.add(target);rq.timeSpanStart=0;rq.timeSpanDuration=target.duration;
+      var output=new File(p.output);mkdir(output.parent);rq.outputModule(1).file=output;app.project.renderQueue.render();
+      if(rq.status!==RQItemStatus.DONE)throw Error('Preview render did not complete');
+      result={output:rq.outputModule(1).file.fsName,compId:target.id,compName:target.name,duration:target.duration,source:info};
+    }
+    else if(request.operation==='inspectFile'){openIsolated(p.project);result=projectInfo();}
     else if(request.operation==='verifyFile'){openIsolated(p.project);result=projectInfo();if(result.missing.length)throw Error('Missing footage: '+result.missing.join(', '));}
     else if(request.operation==='fixture'){
       if(app.project.file||app.project.numItems)throw Error('Fixture requires an empty project');var output=mkdir(new Folder(p.output));var comp=app.project.items.addComp('YimuCraft 技术测试，不用于成片',640,360,1,2,24);
