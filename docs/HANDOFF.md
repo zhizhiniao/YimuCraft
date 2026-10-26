@@ -916,3 +916,13 @@ PR 媒体可能关工程仍占用；EPERM 移动失败已验证保留源目录�
 - 发布完成：main 已含源码与文档；标签 v0.7.56-dev.1 固定提交 7bd3be11ba6e2472812d8ff741019792f09e56c8。Release ID 423779605，draft=false/prerelease=true，旧 v0.7.34-dev.1 保留。三个附件为安装包、SHA256SUMS.txt 和版本验证清单（GitHub 另提供两项源码压缩包）。
 - 远端验收：安装包 199,370,423 字节，服务端 SHA256 cb9b91a94332d7a54e79aab34c70d29dd9c64a11561845df1e133b067d035482，与本地一致；匿名 EXE/校验文件 HEAD 均 200，校验文件内容逐字节相同。公开浏览器首页显示 0.7.56，Release 五张截图 complete=true/naturalWidth=1920，版本和标签链接正确。证据 remote-published.json、anonymous-download.json；仓库简介同步 AI/MCP 能力。
 - 收尾：公开页面为 https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.56-dev.1 。源码无本轮产品行为修改，无重复安装、用户库迁移或模型付费调用。历史辅助脚本有尾部空行，保留原内容；产品源码字节保持，以免归档与安装版偏离。本轮授权工作完成，用户可直接查看下载与图文说明。
+
+### 2026-10-25 — MIT 许可与 Obsidian 项目介绍
+- 原因：用户要求撰写首个 GitHub 项目介绍，并明确选择 MIT，允许商用及闭源修改、保留版权与许可声明。
+- 前后：原创代码与文档从未声明许可改为 MIT；新增 LICENSE，package/lock 同步 SPDX，修正文档旧私有/未授权描述。第三方保留原许可，FFmpeg GPLv3 和品牌素材不改授权。
+- 文件：LICENSE、package.json、package-lock.json、electron-builder.yml、README、THIRD_PARTY_NOTICES、CONTRIBUTING、docs/GITHUB-GUIDE、本主档；Obsidian 主稿 content_id=yc-intro-20261025，制作入口 K:\02图文公众号\projects\一幕YimuCraft：我的第一个GitHub开源项目\PROJECT.md。
+- 验证：执行 JSON/许可/图片相对链接及哈希核查；正文含结构大纲、五张0.7.56原始实机截图、功能边界与下载入口。远端同步结果在下方追加。
+- 边界：无 src 行为修改；打包白名单新增许可文件供后续构建使用，本轮不重打包、不改历史标签/安装包，不声称完整第三方分发审计完成。公众号未发布，Obsidian及手机渲染尚未实测。
+- 回退：未发布的文案可正常修改，历史安装包不变；公开授权后不能把 Git 撤销当作收回已授予许可。下一步按本人意见修改主稿及后续公众号排版。
+- 经验候选：行动=绑定版本截图并分开说明源码许可与第三方许可；结果=主稿与授权声明有可追溯来源；原因=避免把公开源码、整包授权、功能兼容混为一谈；验收=链接/哈希/远端许可识别；反例=仅改标题为开源；边界=非完整法律或客户端验收，待本人确认不入经验库。
+- 验证补记：首次 PowerShell ConvertFrom-Json 不支持 lockfile 空键导致验证脚本失败；改用 -AsHashtable 后两处 MIT 元数据、五张图片引用与原图 SHA256、一份主稿均通过。属于验证脚本问题，未修改依赖树。

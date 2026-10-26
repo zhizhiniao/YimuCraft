@@ -2,6 +2,7 @@
   "name": "yimucraft",
   "version": "0.7.56",
   "private": true,
+  "license": "MIT",
   "description": "一幕 YimuCraft——蒋啊讲出品",
   "main": "src/main.cjs",
   "scripts": {
