@@ -18,6 +18,7 @@ win:
   icon: src/app.ico
 
 asarUnpack:
+  - src/native/*.exe
   - node_modules/ffmpeg-static/ffmpeg.exe
   - node_modules/onnxruntime-node/bin/**/*
   - node_modules/@img/**/*

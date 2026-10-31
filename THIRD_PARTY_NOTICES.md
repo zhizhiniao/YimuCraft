@@ -1,5 +1,7 @@
 # 第三方组件说明
 
+0.7.57 项目画布复用 [Panzoom 4.6.2](https://github.com/timmywil/panzoom)、[interact.js 1.10.28](https://github.com/taye/interact.js) 与 [Chokidar 4.0.3](https://github.com/paulmillr/chokidar)，均为 MIT。前两者构建副本及许可保存在 `src/third-party/canvas/`；Chokidar 及 readdirp 许可随依赖保留。未使用 tldraw SDK。
+
 YimuCraft 使用 Electron、Node.js、SQLite、Three.js、FFmpeg、Transformers.js、ONNX Runtime、PDF.js、fontkit、Canvas 及 ZIP 工具等组件。精确依赖树由 package-lock.json 记录。
 
 0.7.56 还使用 Model Context Protocol SDK、js-yaml 和 sharp。连接入口及文件夹品牌图形的来源见 [连接图标](src/logos/SOURCES.md)、[平台图标](src/logos/PLATFORM-SOURCES.md)与[软件图标](src/logos/SOFTWARE-SOURCES.md)。商标归各权利人所有，图标展示不表示合作、背书或对应工程格式兼容。

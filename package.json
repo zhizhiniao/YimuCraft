@@ -1,6 +1,6 @@
 {
   "name": "yimucraft",
-  "version": "0.7.56",
+  "version": "0.7.63",
   "private": true,
   "license": "MIT",
   "description": "一幕 YimuCraft——蒋啊讲出品",
@@ -10,17 +10,22 @@
     "test": "node scripts/test-core.cjs",
     "test:ui": "node scripts/smoke.cjs",
     "package": "electron-builder --win dir",
-    "installer": "electron-builder --win nsis --config.directories.output=release/0.7.56",
+    "installer": "electron-builder --win nsis --config.directories.output=release/0.7.63",
     "build:model": "node scripts/build-model-view.cjs",
-    "prepackage": "npm test && npm run build:brand && npm run build:model",
-    "preinstaller": "npm test && npm run build:brand && npm run build:model",
-    "build:brand": "node scripts/build-brand.cjs"
+    "prepackage": "npm run build:ae && npm test && npm run build:brand && npm run build:model && npm run build:canvas && npm run build:transfer",
+    "preinstaller": "npm run build:ae && npm test && npm run build:brand && npm run build:model && npm run build:canvas && npm run build:transfer",
+    "build:brand": "node scripts/build-brand.cjs",
+    "build:canvas": "node scripts/build-canvas.cjs",
+    "build:ae": "node scripts/build-ae-state.cjs",
+    "build:transfer": "node scripts/build-transfer.cjs"
   },
   "devDependencies": {
     "@electron/asar": "4.0.1",
+    "@panzoom/panzoom": "4.6.2",
     "electron": "45.0.0",
     "electron-builder": "26.15.3",
     "esbuild": "0.28.2",
+    "interactjs": "1.10.28",
     "playwright": "1.56.1",
     "three": "0.186.1"
   },
@@ -33,11 +38,13 @@
     "@huggingface/transformers": "3.8.1",
     "@modelcontextprotocol/sdk": "1.32.1",
     "@napi-rs/canvas": "1.0.13",
+    "chokidar": "4.0.3",
     "ffmpeg-static": "5.3.0",
     "fontkit": "^2.0.4",
     "js-yaml": "4.3.2",
     "pdfjs-dist": "6.4.299",
     "yauzl": "3.2.1",
-    "yazl": "^3.3.1"
+    "yazl": "^3.3.1",
+    "sharp": "0.35.5"
   }
 }

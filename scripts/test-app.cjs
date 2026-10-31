@@ -18,6 +18,7 @@ const KEEP_SANDBOX = process.env.YIMU_TEST_SANDBOX === '1';
 
 function withSandboxFlag(args) {
   const list = Array.isArray(args) ? [...args] : [];
+  if (process.env.YIMU_TEST_BACKGROUND === '1') list.unshift('-r', require('path').join(__dirname, 'test-background.cjs'));
   if (KEEP_SANDBOX || list.includes('--no-sandbox')) return list;
   return [...list, '--no-sandbox'];
 }

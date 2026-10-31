@@ -1,0 +1,15 @@
+const {electron}=require('./test-app.cjs'),close=require('./close-test-app.cjs');
+const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
+const run=path.resolve('work/canvas-real-v2-'+Date.now());fs.mkdirSync(run,{recursive:true});
+const productionFile=path.join(process.env.APPDATA,'YimuCraft/project-canvases/projects.json');
+const original=JSON.parse(fs.readFileSync(productionFile)),profile=path.join(run,'profile');fs.mkdirSync(path.join(profile,'app-profile/project-canvases'),{recursive:true});fs.writeFileSync(path.join(profile,'app-profile/project-canvases/projects.json'),JSON.stringify(original));
+const env={...process.env,YIMU_DATA_DIR:profile,YIMU_AE_CONNECTION_FILE:path.join(run,'ae.json'),YIMU_PR_BRIDGE_DIR:path.join(run,'pr')};delete env.ELECTRON_RUN_AS_NODE;
+let app,page;const report={run,errors:[]};
+(async()=>{try{app=await electron.launch({...(process.env.YIMU_TEST_EXE?{executablePath:process.env.YIMU_TEST_EXE,args:[]}:{args:['.']}),env});page=await app.firstWindow();page.on('pageerror',e=>report.errors.push(e.message));await page.locator('#projectCanvas:not([hidden])[data-ready=true]').waitFor({timeout:60000});await page.locator('.canvas-card').first().waitFor({timeout:60000});
+ await page.locator('#canvasShot').selectOption('K01');await page.waitForFunction(()=>[...document.querySelectorAll('.canvas-card img')].filter(i=>i.complete&&i.naturalWidth>0).length>=15,null,{timeout:60000});
+ const b=await page.evaluate(async()=>{const l=await window.yimuCanvas.command('list');return window.yimuCanvas.command('refresh',l.active);});const previous=original.boards.find(i=>i.id===b.id);
+ for(const i of Object.values(previous.items)){const row=b.items[i.id];assert.ok(row);for(const key of ['x','y','status','hiddenAt'])assert.equal(row[key],i[key]);}
+ const sequences=Object.values(b.items).filter(i=>i.kind==='sequence');assert.ok(sequences.length);const portraits=Object.values(b.items).filter(i=>i.pixelHeight>i.pixelWidth&&i.sizeMode==='intrinsic');assert.ok(portraits.length);for(const p of portraits)assert.ok(Math.abs(p.width/p.height-p.pixelWidth/p.pixelHeight)<.01);
+ await page.waitForFunction(()=>{const s=document.querySelector('#canvasStage').getBoundingClientRect();return [...document.querySelectorAll('.canvas-card img')].filter(i=>{const r=i.getBoundingClientRect();return i.complete&&i.naturalWidth>0&&r.right>s.left&&r.left<s.right&&r.bottom>s.top&&r.top<s.bottom;}).length>=15;},null,{timeout:15000});
+ await page.screenshot({path:path.join(run,'project.png')});report.project={root:b.root,originalAssets:Object.keys(previous.items).length,retainedOriginals:Object.keys(previous.items).length,sequences:sequences.length,portraitCards:portraits.length};report.ok=report.errors.length===0;
+}catch(e){report.error=e.stack;process.exitCode=1;if(page)await page.screenshot({path:path.join(run,'failure.png')}).catch(()=>{});}finally{if(app)await close(app).catch(()=>{});fs.writeFileSync(path.join(run,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}})();

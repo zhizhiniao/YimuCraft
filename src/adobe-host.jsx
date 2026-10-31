@@ -4,6 +4,7 @@
   function json(v){if(v===null||v===undefined)return 'null';if(typeof v==='string')return quote(v);if(typeof v==='number')return isFinite(v)?String(v):'null';if(typeof v==='boolean')return v?'true':'false';var a=[],k;if(v instanceof Array){for(k=0;k<v.length;k++)a.push(json(v[k]));return '['+a.join(',')+']';}for(k in v)if(v.hasOwnProperty(k))a.push(quote(k)+':'+json(v[k]));return '{'+a.join(',')+'}';}
   function mkdir(f){if(!f.exists){if(f.parent&&!f.parent.exists)mkdir(f.parent);if(!f.create())throw Error('Cannot create folder: '+f.fsName);}return f;}
   function same(a,b){return String(a).replace(/\\/g,'/').toLowerCase()===String(b).replace(/\\/g,'/').toLowerCase();}
+  function projectSummary(){return {version:app.version,project:app.project.file?app.project.file.fsName:null,dirty:app.project.dirty,items:app.project.numItems};}
   function projectInfo(){var files=[],comps=[],fonts=[],missing=[],i,item,layer,text;
     for(i=1;i<=app.project.numItems;i++){item=app.project.item(i);
       if(item instanceof FootageItem&&item.mainSource instanceof FileSource){var f=item.file;files.push({id:item.id,name:item.name,path:f?f.fsName:null,exists:f?f.exists:false,isStill:item.mainSource.isStill,frameRate:item.frameRate});if(!f||!f.exists||item.footageMissing)missing.push(item.name);}
@@ -48,7 +49,7 @@
     if(request.operation==='collectCurrent')result=collectCurrent(p);
     else if(request.operation==='inspect')result=projectInfo();
     else if(request.operation==='import'){
-      var added=[];app.beginUndoGroup('YimuCraft import');try{for(var i=0;i<p.paths.length;i++){var f=new File(p.paths[i]);if(!f.exists)throw Error('File missing: '+f.fsName);var imported=app.project.importFile(new ImportOptions(f));added.push({id:imported.id,name:imported.name,source:f.fsName});}}finally{app.endUndoGroup();}result={added:added,project:projectInfo()};
+      var added=[];app.beginUndoGroup('YimuCraft import');try{for(var i=0;i<p.paths.length;i++){var f=new File(p.paths[i]);if(!f.exists)throw Error('File missing: '+f.fsName);var imported=app.project.importFile(new ImportOptions(f));added.push({id:imported.id,name:imported.name,source:f.fsName});}}finally{app.endUndoGroup();}result={added:added,project:projectSummary()};
     }else if(request.operation==='preset'){
       var preset=new File(p.path),active=app.project.activeItem;if(!preset.exists||!/\.ffx$/i.test(p.path))throw Error('FFX 预设不存在');if(!(active instanceof CompItem)||!active.selectedLayers.length)throw Error('请先激活合成并选择要应用预设的图层');var selectedIds=[];for(var k=0;k<active.selectedLayers.length;k++)selectedIds.push(active.selectedLayers[k].index);app.beginUndoGroup('YimuCraft preset');try{active.selectedLayers[0].applyPreset(preset);}finally{app.endUndoGroup();}result={preset:preset.fsName,layers:selectedIds,count:selectedIds.length};
     }else if(request.operation==='script'){
