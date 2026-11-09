@@ -1,6 +1,6 @@
 {
   "name": "yimucraft",
-  "version": "0.7.72",
+  "version": "0.7.73",
   "private": true,
   "license": "MIT",
   "description": "一幕 YimuCraft——蒋啊讲出品",
@@ -10,7 +10,7 @@
     "test": "node scripts/test-core.cjs",
     "test:ui": "node scripts/smoke.cjs",
     "package": "electron-builder --win dir",
-    "installer": "electron-builder --win nsis --config.directories.output=release/0.7.72",
+    "installer": "electron-builder --win nsis --config.directories.output=release/0.7.73",
     "build:model": "node scripts/build-model-view.cjs",
     "prepackage": "npm run build:ae && npm test && npm run build:brand && npm run build:model && npm run build:canvas && npm run build:transfer",
     "preinstaller": "npm run build:ae && npm test && npm run build:brand && npm run build:model && npm run build:canvas && npm run build:transfer",

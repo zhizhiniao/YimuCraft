@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const VERSION=2;
+const VERSION=3;
 function migrate(db,folder,initialize){
  const version=Number(db.prepare('PRAGMA user_version').get().user_version);
  if(version>VERSION)throw Error('素材库版本较新，请使用更新的一幕；未修改数据库');

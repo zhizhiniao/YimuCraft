@@ -3,6 +3,7 @@ const fsp = fs.promises;
 const path = require('node:path');
 const crypto = require('node:crypto');
 const appearance=require('./appearance.js');
+const folderTree=require('./folder-tree.cjs');
 const { DatabaseSync } = require('node:sqlite');
 const {zipFolder,unzip}=require('./archive.cjs');
 const groups = { image: ['png','jpg','jpeg','webp','gif','bmp','svg','avif','psd','psb','tif','tiff','exr','dpx','tga','ai','pdf','hdr','dds','jp2','j2k','jpf','jpx',...require('./raw-preview.cjs').extensions], video: ['mp4','webm','mov','m4v','mkv','avi','mxf'], audio: ['wav','mp3','ogg','flac','m4a','aac'], project: ['aep','aepx','prproj','ffx','jsx','jsxbin','mogrt'], lut: ['cube'], model: ['obj','stl','glb','gltf','fbx'], font: ['ttf','otf','woff','woff2'] };
@@ -42,6 +43,7 @@ class Library {
     if(!this.db.prepare('PRAGMA table_info(assets)').all().some(x=>x.name==='missing'))this.db.exec('ALTER TABLE assets ADD COLUMN missing INTEGER NOT NULL DEFAULT 0');
     this.db.exec('CREATE TABLE IF NOT EXISTS external_assets(asset INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,source_id INTEGER)');
     this.db.exec('CREATE TABLE IF NOT EXISTS file_identity(asset INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,identity TEXT)');
+    this.db.exec("CREATE TABLE IF NOT EXISTS folder_tree_parents(source TEXT PRIMARY KEY COLLATE NOCASE,parent TEXT NOT NULL)");
     this.db.exec("CREATE TABLE IF NOT EXISTS folder_preferences(path TEXT PRIMARY KEY,icon TEXT NOT NULL DEFAULT '▱')");
     for(const table of ['folder_preferences','collections'])for(const [column,defaultValue] of [['icon','folder'],['color','']])if(!this.db.prepare('PRAGMA table_info('+table+')').all().some(x=>x.name===column))this.db.exec("ALTER TABLE "+table+" ADD COLUMN "+column+" TEXT NOT NULL DEFAULT '"+defaultValue+"'");
     this.db.exec("CREATE UNIQUE INDEX IF NOT EXISTS unique_folder_type ON folder_preferences(icon) WHERE icon IN ('type-pr','type-ae','type-ps','type-audio')");
@@ -99,7 +101,24 @@ this.db.exec('COMMIT');require('./trash.cjs').recover(this);}catch(e){this.db.cl
     if(f.collection){where.push('id IN (WITH RECURSIVE c(id) AS (SELECT id FROM collections WHERE id=? UNION ALL SELECT collections.id FROM collections JOIN c ON collections.parent=c.id) SELECT asset FROM collection_assets WHERE collection IN (SELECT id FROM c))');args.push(Number(f.collection));}
     if (f.rating) {where.push('rating>=?');args.push(Number(f.rating));}
     if (f.tag) {where.push('EXISTS (SELECT 1 FROM json_each(assets.tags) WHERE value=?)'); args.push(f.tag);}
-    if (f.folder) { const folder=normalize(f.folder); if (f.recursive !== false) {where.push('(folder=? OR substr(folder,1,?)=?)'); args.push(folder,folder.length+1,folder+path.sep);} else {where.push('folder=?');args.push(folder);} }
+    if (f.folder) {
+      const folder=normalize(f.folder);
+      let branch;
+      if (f.recursive !== false && this.db.prepare('SELECT 1 FROM folder_tree_parents LIMIT 1').get()) {
+        const data=this.folderTreeData(Boolean(f.trash));
+        branch=folderTree.buildTree(data,data.placements).lookup(folder);
+      }
+      if (branch) {
+        const scope=[];
+        function collect(node) {scope.push(node.path);node.children.forEach(collect);}
+        collect(branch);
+        where.push('folder COLLATE NOCASE IN (SELECT value FROM json_each(?))');
+        args.push(JSON.stringify(scope));
+      } else if (f.recursive !== false) {
+        where.push('(folder=? OR substr(folder,1,?)=?)');
+        args.push(folder,folder.length+1,folder+path.sep);
+      } else {where.push('folder=?');args.push(folder);}
+    }
     for (const [field,from,to] of [['added',f.after,f.before],['modified',f.modifiedAfter,f.modifiedBefore]]) {
       if (from) {where.push(field+'>=?');args.push(new Date(from+'T00:00:00').getTime());} if (to) {where.push(field+'<?');const date=new Date(to+'T00:00:00');date.setDate(date.getDate()+1);args.push(date.getTime());}
     }
@@ -110,7 +129,18 @@ this.db.exec('COMMIT');require('./trash.cjs').recover(this);}catch(e){this.db.cl
     const rows=this.db.prepare(`SELECT * FROM assets WHERE ${clause} ORDER BY ${order},id LIMIT ? OFFSET ?`).all(...args,Math.max(1,Math.min(500,Number(f.limit)||200)),Math.max(0,Number(f.offset)||0));
     return {total,items:rows.map(r=>({...r,cover:r.cover_override||r.cover,tags:JSON.parse(r.tags)}))};
   }
-  stats() {let linkedSource=null;try{linkedSource=JSON.parse(fs.readFileSync(path.join(this.folder,'linked-library.json'),'utf8')).source;}catch{}return {linkedSource,tagCounts:this.db.prepare('SELECT value tag,count(*) count FROM assets,json_each(assets.tags) WHERE hidden=0 GROUP BY value ORDER BY value').all(),folderPreferences:this.db.prepare('SELECT path,icon,color FROM folder_preferences').all(),total:this.db.prepare('SELECT count(*) n FROM assets WHERE hidden=0').get().n,collections:this.db.prepare('SELECT c.*,count(a.id) count FROM collections c LEFT JOIN collection_assets ca ON ca.collection=c.id LEFT JOIN assets a ON ca.asset=a.id AND a.hidden=0 GROUP BY c.id ORDER BY c.name').all(),folders:this.db.prepare('SELECT folder,count(*) count FROM assets WHERE hidden=0 GROUP BY folder ORDER BY folder').all(),roots:this.db.prepare('SELECT path FROM roots').all().map(x=>x.path),tags:this.db.prepare('SELECT DISTINCT value FROM assets,json_each(assets.tags) WHERE hidden=0 ORDER BY value').all().map(x=>x.value),formats:this.db.prepare('SELECT DISTINCT ext FROM assets WHERE hidden=0 ORDER BY ext').all().map(x=>x.ext),location:this.folder};}
+  folderTreeData(includeHidden=false) {
+    let linkedSource=null;
+    try {linkedSource=JSON.parse(fs.readFileSync(path.join(this.folder,'linked-library.json'),'utf8')).source;} catch {}
+    return {
+      location:this.folder,linkedSource,
+      folderPreferences:this.db.prepare('SELECT path,icon,color FROM folder_preferences').all(),
+      folders:this.db.prepare('SELECT folder,count(*) count FROM assets '+(includeHidden?'':'WHERE hidden=0 ')+'GROUP BY folder ORDER BY folder').all(),
+      placements:this.db.prepare('SELECT source,parent FROM folder_tree_parents').all()
+    };
+  }
+  organizeFolder(libraryPath,source,parent) {return folderTree.organize(this,libraryPath,source,parent);}
+  stats() {const data=this.folderTreeData();return {linkedSource:data.linkedSource,folderTree:folderTree.buildTree(data,data.placements).root.children,tagCounts:this.db.prepare('SELECT value tag,count(*) count FROM assets,json_each(assets.tags) WHERE hidden=0 GROUP BY value ORDER BY value').all(),folderPreferences:data.folderPreferences,total:this.db.prepare('SELECT count(*) n FROM assets WHERE hidden=0').get().n,collections:this.db.prepare('SELECT c.*,count(a.id) count FROM collections c LEFT JOIN collection_assets ca ON ca.collection=c.id LEFT JOIN assets a ON ca.asset=a.id AND a.hidden=0 GROUP BY c.id ORDER BY c.name').all(),folders:data.folders,roots:this.db.prepare('SELECT path FROM roots').all().map(x=>x.path),tags:this.db.prepare('SELECT DISTINCT value FROM assets,json_each(assets.tags) WHERE hidden=0 ORDER BY value').all().map(x=>x.value),formats:this.db.prepare('SELECT DISTINCT ext FROM assets WHERE hidden=0 ORDER BY ext').all().map(x=>x.ext),location:this.folder};}
   saveCollection(id,name,parent=null){name=String(name).trim();if(!name||name.length>100)throw Error('分类名须为 1–100 个字符');parent=parent?Number(parent):null;if(parent&&!this.db.prepare('SELECT id FROM collections WHERE id=?').get(parent))throw Error('上级分类不存在');if(id){id=Number(id);if(!this.db.prepare('SELECT id FROM collections WHERE id=?').get(id))throw Error('分类不存在');let p=parent;while(p){if(p===id)throw Error('分类不能移动到自身或子分类');p=this.db.prepare('SELECT parent FROM collections WHERE id=?').get(p)?.parent;}this.db.prepare('UPDATE collections SET name=?,parent=? WHERE id=?').run(name,parent,id);return {id};}return {id:Number(this.db.prepare('INSERT INTO collections(name,parent) VALUES(?,?)').run(name,parent).lastInsertRowid)};}
   deleteCollection(id){this.db.prepare('DELETE FROM collections WHERE id=?').run(Number(id));return {message:'已删除分类及其子分类；原文件与素材记录保留'};}
   assignCollection(ids,collection,remove=false){this.db.exec('BEGIN');try{for(const id of ids){this.get(id);this.db.prepare(remove?'DELETE FROM collection_assets WHERE collection=? AND asset=?':'INSERT OR IGNORE INTO collection_assets(collection,asset) VALUES(?,?)').run(Number(collection),Number(id));}this.db.exec('COMMIT');return {count:ids.length};}catch(e){this.db.exec('ROLLBACK');throw e;}}
@@ -226,7 +256,7 @@ this.db.exec('COMMIT');require('./trash.cjs').recover(this);}catch(e){this.db.cl
   async relink(oldRoot,newRoot) {
     oldRoot=normalize(oldRoot);newRoot=normalize(newRoot);const rows=this.db.prepare('SELECT * FROM assets').all().filter(r=>inside(oldRoot,r.path)),changes=[],remap=file=>file&&inside(oldRoot,file)?path.join(newRoot,path.relative(oldRoot,file)):file;let verified=0;
     for(const r of rows){const p=remap(r.path);if(!fs.existsSync(p))throw Error('新位置缺少文件：'+p);if(fs.statSync(p).size!==r.size)throw Error('新位置文件大小不一致：'+p);const digest=this.db.prepare('SELECT stored_digest FROM import_sources WHERE asset=? LIMIT 1').get(r.id)?.stored_digest||(fs.existsSync(r.path)?await hash(r.path):null);if(digest){if(await hash(p)!==digest)throw Error('新位置文件内容校验失败：'+p);verified++;}const next={...r,next:p};for(const field of ['cover','preview','cover_override','bundle_folder']){next[field]=remap(r[field]);if(next[field]&&next[field]!==r[field]&&!fs.existsSync(next[field]))throw Error('新位置缺少关联文件：'+next[field]);}changes.push(next);}
-    this.db.exec('BEGIN');try{for(const r of changes)this.db.prepare('UPDATE assets SET path=?,path_key=?,folder=?,cover=?,preview=?,cover_override=?,bundle_folder=? WHERE id=?').run(r.next,key(r.next),path.dirname(r.next),r.cover,r.preview,r.cover_override,r.bundle_folder,r.id);for(const r of this.db.prepare('SELECT path FROM roots').all())if(inside(oldRoot,r.path)){this.db.prepare('DELETE FROM roots WHERE path=?').run(r.path);this.db.prepare('INSERT OR IGNORE INTO roots VALUES(?)').run(remap(r.path));}for(const f of this.db.prepare('SELECT path,icon,color FROM folder_preferences').all())if(inside(oldRoot,f.path)){this.db.prepare('DELETE FROM folder_preferences WHERE path=?').run(f.path);this.db.prepare('INSERT INTO folder_preferences(path,icon,color) VALUES(?,?,?)').run(remap(f.path),f.icon,f.color);}this.db.exec('COMMIT');}catch(e){this.db.exec('ROLLBACK');throw e;}return {count:changes.length,verified,message:'已重新定位 '+changes.length+' 项，其中 '+verified+' 项通过内容校验'+(verified<changes.length?'；旧索引中无哈希且原文件离线的条目仅核对大小':'')};
+    this.db.exec('BEGIN');try{for(const r of changes)this.db.prepare('UPDATE assets SET path=?,path_key=?,folder=?,cover=?,preview=?,cover_override=?,bundle_folder=? WHERE id=?').run(r.next,key(r.next),path.dirname(r.next),r.cover,r.preview,r.cover_override,r.bundle_folder,r.id);for(const r of this.db.prepare('SELECT path FROM roots').all())if(inside(oldRoot,r.path)){this.db.prepare('DELETE FROM roots WHERE path=?').run(r.path);this.db.prepare('INSERT OR IGNORE INTO roots VALUES(?)').run(remap(r.path));}for(const f of this.db.prepare('SELECT path,icon,color FROM folder_preferences').all())if(inside(oldRoot,f.path)){this.db.prepare('DELETE FROM folder_preferences WHERE path=?').run(f.path);this.db.prepare('INSERT INTO folder_preferences(path,icon,color) VALUES(?,?,?)').run(remap(f.path),f.icon,f.color);}folderTree.remapPlacements(this.db,remap);this.db.exec('COMMIT');}catch(e){this.db.exec('ROLLBACK');throw e;}return {count:changes.length,verified,message:'已重新定位 '+changes.length+' 项，其中 '+verified+' 项通过内容校验'+(verified<changes.length?'；旧索引中无哈希且原文件离线的条目仅核对大小':'')};
   }
 }
 module.exports={Library,kind,inside,safeJoin,hash};

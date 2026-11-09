@@ -1,0 +1,55 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const {Library} = require('../src/library.cjs');
+
+test('folder organization moves the whole visible branch, persists, and leaves files in place', async () => {
+  const root = fs.mkdtempSync(path.resolve('work/tree-move-'));
+  let lib = new Library(root);
+  try {
+    const effects = (await lib.createFolder('', '526种AE内置插件效果')).path;
+    const child = (await lib.createFolder(effects, '光效')).path;
+    const presets = (await lib.createFolder('', 'AE预设', 'type-ae')).path;
+    const rows = [effects, child, presets].map((folder, i) => path.join(folder, i + '.txt'));
+    for (const file of rows) fs.writeFileSync(file, file);
+    await lib.importPaths(rows);
+    const original = lib.query().items;
+    lib.db.exec('DROP TABLE folder_tree_parents; PRAGMA user_version=2');
+    lib.close();
+    lib = new Library(root);
+    assert.ok(fs.readdirSync(path.join(root, 'schema-backups')).some(n => n.includes('pre-v2-to-v3')));
+    lib.organizeFolder(root, effects, presets);
+    lib.organizeFolder(root, effects, presets);
+    assert.equal(lib.query({folder:presets}).total, 3);
+    assert.equal(lib.query({folder:presets,recursive:false}).total, 1);
+    assert.equal(lib.stats().folderTree.find(n => n.path === presets).count, 3);
+    assert.throws(() => lib.organizeFolder(root, presets, child), /子文件夹/);
+    assert.throws(() => lib.organizeFolder(root, effects, effects), /自身/);
+    assert.throws(() => lib.organizeFolder(root, effects, path.join(root, 'unknown')), /刷新/);
+    assert.throws(() => lib.organizeFolder(root+'-other', effects, ''), /切换/);
+    lib.close();
+    lib = new Library(root);
+    assert.equal(lib.stats().folderTree.find(n => n.path === presets).children[0].path, effects);
+    assert.deepEqual(lib.query().items, original);
+    for (const file of rows) assert.equal(fs.readFileSync(file, 'utf8'), file);
+    lib.organizeFolder(root, child, '');
+    assert.equal(lib.query({folder:presets}).total, 2);
+    assert.equal(lib.query({folder:effects}).total, 1);
+    const twin = (await lib.createFolder('', '光效')).path;
+    lib.organizeFolder(root, twin, presets);
+    assert.throws(() => lib.organizeFolder(root, child, presets), /同名/);
+    lib.organizeFolder(root, effects, '');
+    assert.equal(lib.query({folder:presets}).total, 1);
+    lib.organizeFolder(root, child, effects);
+    assert.equal(lib.stats().folderTree.find(n => n.path === effects).count, 2);
+    const newPresets=path.join(path.dirname(presets),'AE预设改名');
+    await lib.moveFolder(presets,newPresets);
+    assert.equal(lib.stats().folderTree.find(n=>n.path===newPresets).children[0].path,twin);
+    const empty=(await lib.createFolder('', '空目标')).path;
+    lib.organizeFolder(root,twin,empty);
+    await assert.rejects(lib.removeEmptyFolder(empty),/文件夹不为空/);
+    lib.organizeFolder(root,twin,'');
+    await lib.removeEmptyFolder(empty);
+  } finally {lib.close();}
+});

@@ -8,11 +8,17 @@
 
 面向视频创作者的 Windows 本地素材管理工具，提供素材整理、媒体预览，以及 After Effects / Premiere Pro 联动。
 
-> **0.7.72 开发者预览版** · Windows x64 · 2026-11-08。GitHub 源码和下载安装包均为此版本。
+> **0.7.73 开发者预览版** · Windows x64 · 2026-11-08。GitHub 源码和下载安装包均为此版本。
 
-[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.72-dev.1/YimuCraft.Setup.0.7.72.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.72-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.73-dev.1/YimuCraft.Setup.0.7.73.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.73-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
 
-## 0.7.72 更新
+## 0.7.73 文件夹拖拽
+
+按住左侧文件夹的图标或名称，拖到目标文件夹并松手，即可连同子文件夹一起移入。拖到顶部「文件夹」标题可移回根目录。层级在重启后保留，磁盘上的原文件保持原位。详见[发布说明](docs/releases/v0.7.73-dev.1.md)。
+
+![0.7.73 测试库中的父子文件夹与素材数量](docs/images/v0.7.73/folder-tree.png)
+
+## 0.7.72 找素材
 
 在左侧打开「找素材」，选一个已关联的项目仓库。先用名称或标签筛选，再输入“横屏”或“只看已确认”缩小范围。勾选 2–4 项可并排对比，选定的素材可以作为独立引用加入画布候选组，保留原文件与原编排。
 
@@ -41,19 +47,19 @@
 
 ## 安装与开始使用
 
-1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.72-dev.1) 下载 `YimuCraft.Setup.0.7.72.exe`。
+1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.73-dev.1) 下载 `YimuCraft.Setup.0.7.73.exe`。
 2. 将安装包放在本机磁盘后运行，按向导完成安装。
 3. 打开“一幕 YimuCraft”，新建素材库或导入文件。首次安装不附带演示素材。
 4. 如需 Adobe 联动，按[使用说明](docs/USAGE.md)安装对应面板。
 
 系统目标为 Windows x64；当前仅在开发者本机验证。安装包未做代码签名。AE / PR 需要另行安装；基础素材整理不依赖 Adobe。AI 功能首次使用需要下载模型。
 
-安装包不携带个人素材、测试库或账户配置。升级会沿用本机已有数据，不会自动清空旧库。索引备份不包含媒体文件，请自行保存原素材。
+安装包不携带个人素材、测试库或账户配置。首次打开旧索引时会保存升级前快照。回退到旧版本时请使用该快照。索引备份不包含媒体文件，请自行保存原素材。
 
 下载页同时提供 `SHA256SUMS.txt`。在 PowerShell 中运行以下命令，将结果与校验文件对照：
 
 ```powershell
-Get-FileHash '.\YimuCraft.Setup.0.7.72.exe' -Algorithm SHA256
+Get-FileHash '.\YimuCraft.Setup.0.7.73.exe' -Algorithm SHA256
 ```
 
 ## 本地开发
