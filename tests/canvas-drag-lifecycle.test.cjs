@@ -5,8 +5,9 @@ async function fixture(){
  class Store extends EventEmitter{async init(){return this;}async dragFiles(){return [file];}}
  let now=Date.now();class Clock extends Date{static now(){return now;}}
  const electron={app:{getPath:()=>root},ipcMain:{on:(n,f)=>listeners[n]=f,handle:(n,f)=>commands[n]=f},nativeImage:{createFromPath:()=>({resize:()=>({})})}};
+ const sourceRequire=require('node:module').createRequire(path.resolve('src/project-canvas-ipc.cjs'));
  const source=await fs.readFile(path.resolve('src/project-canvas-ipc.cjs'),'utf8'),module={exports:{}};
- vm.runInNewContext(source,{module,exports:module.exports,__dirname:path.resolve('src'),require:id=>id==='electron'?electron:id==='./project-canvas.cjs'?{ProjectCanvases:Store}:id==='./canvas-transfer.cjs'?{CanvasTransfer:class{}}:require(id),Date:Clock,Response});
+ vm.runInNewContext(source,{module,exports:module.exports,__dirname:path.resolve('src'),require:id=>id==='electron'?electron:id==='./project-canvas.cjs'?{ProjectCanvases:Store}:id==='./canvas-transfer.cjs'?{CanvasTransfer:class{}}:sourceRequire(id),Date:Clock,Response});
  await module.exports.installProjectCanvas(win);const event={sender,senderFrame:frame};
  return {file,sender,calls,sent,event,prepare:()=>commands['canvas-command'](event,'prepareDrag','board',['image']),drag:(token,e=event)=>listeners['canvas-drag'](e,token),advance:ms=>now+=ms};
 }

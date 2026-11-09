@@ -1,5 +1,5 @@
 const path=require('node:path'),{spawn}=require('node:child_process');
-const extensions=new Set('png jpg jpeg webp gif bmp avif tif tiff exr dpx tga psd hdr dds jp2 j2k jpf jpx mp4 webm mov m4v mkv avi mxf wav mp3 ogg flac m4a aac'.split(' '));
+const extensions=new Set('png jpg jpeg webp gif bmp avif tif tiff exr dpx tga psd hdr dds jp2 j2k jpf jpx mp4 webm mov m4v mkv avi mxf mpg mpeg mts m2ts ts wmv flv wav mp3 ogg flac m4a aac aif aiff opus wma ac3'.split(' '));
 // Inspect headers only. No output or media decode is requested.
 function inspect(file){
  if(!extensions.has(path.extname(file).slice(1).toLowerCase()))return Promise.resolve({width:0,height:0,duration:0});

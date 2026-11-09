@@ -12,7 +12,7 @@ let app,page;const report={run,checks:[],errors:[]};
 async function launch(){app=await electron.launch({...(process.env.YIMU_TEST_EXE?{executablePath:process.env.YIMU_TEST_EXE,args:[]}:{args:['.']}),env});page=await app.firstWindow();page.on('pageerror',e=>report.errors.push(e.message));await page.locator('#canvasTab').waitFor();await page.locator('#canvasTab').click();}
 const snapshot=()=>page.evaluate(async()=>{const list=await window.yimuCanvas.command('list');return window.yimuCanvas.command('refresh',list.active);});
 (async()=>{try{
- await launch();await page.locator('#canvasPath').fill(source);await page.locator('#canvasLink').click();await page.waitForFunction(()=>document.querySelectorAll('.canvas-card').length===2);
+ await launch();await require('./open-canvas-project.cjs')(app,page,source);await page.waitForFunction(()=>document.querySelectorAll('.canvas-card').length===2);
  let state=await snapshot(),item=Object.values(state.items).find(i=>i.name==='参考 v01.png');report.checks.push('path association; 2 real image cards; no library import');
  await page.locator('#canvasShot').selectOption('K01');await page.waitForTimeout(400);
  let card=page.locator(`.canvas-card[data-id="${item.id}"]`);await card.click();await page.locator('#canvasSelection button').filter({hasText:'标为已确认'}).click();
@@ -27,7 +27,7 @@ const snapshot=()=>page.evaluate(async()=>{const list=await window.yimuCanvas.co
  await page.screenshot({path:path.join(run,'fixture-canvas.png')});const saved=(await snapshot()).items[item.id];await close(app);app=null;
  await launch();await page.waitForSelector('.canvas-card');state=await snapshot();assert.equal(state.items[item.id].x,saved.x);assert.equal(state.items[item.id].width,saved.width);assert.equal(state.items[item.id].status,'confirmed');report.checks.push('process restart preserves layout and confirmation');
  // Real project read-only integration, in the isolated profile.
- await page.locator('#canvasPath').fill('E:\\20261025未知君AI动画');await page.locator('#canvasLink').click();await page.waitForFunction(()=>document.querySelector('#canvasCount').textContent.includes('项可见')&&document.querySelectorAll('.canvas-card').length>10,{},{timeout:30000});
+ await require('./open-canvas-project.cjs')(app,page,'E:\\20261025未知君AI动画');await page.waitForFunction(()=>document.querySelector('#canvasCount').textContent.includes('项可见')&&document.querySelectorAll('.canvas-card').length>10,{},{timeout:30000});
  await page.locator('#canvasShot').selectOption('K01');await page.waitForFunction(()=>[...document.querySelectorAll('.canvas-card img')].filter(i=>i.complete&&i.naturalWidth>0).length>=30,{},{timeout:30000});await page.screenshot({path:path.join(run,'unknownjun-canvas.png')});const current=await snapshot();report.realProject={count:Object.keys(current.items).length,groups:Object.keys(current.groups),root:current.root};report.checks.push('actual Unknownjun project linked; at least 30 decoded thumbnails; no library import');
  assert.equal(report.errors.length,0);report.ok=true;
 }catch(e){report.error=e.stack;process.exitCode=1;if(page)await page.screenshot({path:path.join(run,'failure.png')}).catch(()=>{});}

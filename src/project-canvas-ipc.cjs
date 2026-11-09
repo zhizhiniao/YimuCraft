@@ -1,21 +1,26 @@
 const {app,dialog,ipcMain,nativeImage,shell,clipboard}=require('electron');
 const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
-const {ProjectCanvases}=require('./project-canvas.cjs');
+const {ProjectCanvases,TYPES,fileKind}=require('./project-canvas.cjs');
 async function installProjectCanvas(win){
   const folder=path.join(app.getPath('userData'),'project-canvases');
   const store=await new ProjectCanvases(folder).init();
+  const discovery=require('./canvas-discovery.cjs'),visual=discovery.visualSearch(store);
+  const previews=new (require('./canvas-preview-media.cjs').CanvasPreviewMedia)(path.join(folder,'previews'));
   const transfer=new (require('./canvas-transfer.cjs').CanvasTransfer)(folder);const prepared=new Map();let nativeDragging=false;
   const transferFiles=(id,ids)=>{if(!Array.isArray(ids)||!ids.length||ids.length>100||ids.some(i=>typeof i!=='string'))throw Error('请选择 1–100 个素材');return store.dragFiles(id,ids);};
   const check=event=>{if(event.sender!==win.webContents||event.senderFrame!==win.webContents.mainFrame)throw Error('无效画布调用');};
   let actionQueue=Promise.resolve();
   const ordered=fn=>{const p=actionQueue.then(fn);actionQueue=p.catch(()=>{});return p;};
   const actions={
+    discoveryGroup:async(id,ids,name)=>{if(!Array.isArray(ids)||!ids.length||ids.length>200)throw Error('请选择 1–200 项');await Promise.all(ids.map(item=>store.resolve(id,item)));return discovery.candidateGroup(store,id,ids,name);},discoveryUndo:(id,group)=>discovery.undoCandidateGroup(store,id,group),
+    discoveryCancel:()=>{visual.cancel();return true;},
+    discoverySimilar:async(id,query,referenceId)=>{let reference;if(referenceId){const row=store.board(id).items[referenceId];if(!row||row.kind!=='image'||row.hiddenAt||row.missing)throw Error('参考图片不可用');reference={id:referenceId};}else{const r=await dialog.showOpenDialog(win,{title:'以图找 · 选择参考图片',properties:['openFile'],filters:[{name:'图片',extensions:['png','jpg','jpeg','webp','tif','tiff','avif']}]});if(r.canceled)return null;reference={file:r.filePaths[0]};}return visual.search(id,query,reference);},
     sendTargets:()=>transfer.targets(),saveSendTargets:targets=>transfer.save(targets),sendWindows:()=>transfer.windows(),
     sendTo:async(id,ids,target)=>transfer.send(target,await transferFiles(id,ids)),
     prepareDrag:async(id,ids)=>{const files=await transferFiles(id,ids);const token=crypto.randomUUID();for(const [key,value] of prepared)if(value.until<Date.now())prepared.delete(key);while(prepared.size>=8)prepared.delete(prepared.keys().next().value);prepared.set(token,{files,until:Date.now()+60000});return token;},
-    list:()=>store.list(),workspace:value=>store.workspace(value),settings:(id,settings)=>store.settings(id,settings),
+    list:()=>store.list(),workspace:value=>store.workspace(value),settings:(id,settings)=>store.settings(id,settings),removeRepository:id=>store.remove(id),
     move:(id,changes)=>store.move(id,changes),create:(id,node)=>store.create(id,node),dissolve:(id,group)=>store.dissolve(id,group),connect:(id,from,to,label,anchors)=>store.connect(id,from,to,label,anchors),unlink:(id,line)=>store.unlink(id,line),
-    importFiles:async id=>{const r=await dialog.showOpenDialog(win,{title:'选择素材 · 引用原文件',properties:['openFile','multiSelections'],filters:[{name:'图片、视频、音频与工程',extensions:['png','jpg','jpeg','webp','gif','svg','tif','tiff','psd','exr','mp4','mov','webm','mkv','wav','mp3','flac','aep','prproj','blend','pdf','pptx','docx']}]});return r.canceled?null:store.addSources(id,r.filePaths,'file');},
+    importFiles:async id=>{const r=await dialog.showOpenDialog(win,{title:'选择素材 · 引用原文件',properties:['openFile','multiSelections'],filters:[{name:'图片、视频、音频与工程',extensions:Object.values(TYPES).join(' ').split(' ')}]});return r.canceled?null:store.addSources(id,r.filePaths,'file');},
     addSource:async id=>{const r=await dialog.showOpenDialog(win,{title:'添加来源文件夹 · 不复制素材',properties:['openDirectory']});return r.canceled?null:store.addSources(id,r.filePaths,'directory');},
     choose:async()=>{
       const result=await dialog.showOpenDialog(win,{title:'选择项目根目录 · 只引用原文件',properties:['openDirectory']});if(result.canceled)return null;
@@ -23,12 +28,12 @@ async function installProjectCanvas(win){
     },
     // Explicit path field is equivalent to choosing a folder; no source files are modified.
     attach:async root=>{const id=await store.attach(root);return store.activate(id);},
-    activate:id=>store.activate(id),refresh:id=>store.refresh(id),patch:(id,changes)=>store.patch(id,changes),viewport:(id,view)=>store.viewport(id,view),
+    activate:id=>store.activate(id),refresh:id=>store.refresh(id),patch:(id,changes,expected)=>store.patch(id,changes,expected),viewport:(id,view)=>store.viewport(id,view),
     reveal:async(id,item)=>shell.showItemInFolder(await store.resolve(id,item)),
     copyPath:async(id,item)=>clipboard.writeText(await store.resolve(id,item)),
     open:async(id,item)=>{const file=await store.resolve(id,item);require('./safe-open.cjs').assertSafeOpen(file);const err=await shell.openPath(file);if(err)throw Error(err);}
   };
-  ipcMain.handle('canvas-command',async(event,name,...args)=>{check(event);if(!Object.hasOwn(actions,name))throw Error('未知画布操作');return ordered(()=>actions[name](...args));});
+  ipcMain.handle('canvas-command',async(event,name,...args)=>{check(event);if(!Object.hasOwn(actions,name))throw Error('未知画布操作');if(['discoverySimilar','discoveryCancel'].includes(name))return actions[name](...args);return ordered(()=>actions[name](...args));});
   store.on('changed',board=>{if(!win.isDestroyed())win.webContents.send('canvas-changed',board);});
   store.on('error-state',error=>{if(!win.isDestroyed())win.webContents.send('canvas-error',error);});
   ipcMain.on('canvas-drag',async(event,token)=>{
@@ -51,9 +56,10 @@ async function installProjectCanvas(win){
     }
     return pending.get(hash);
   }
-  return {store,async close(){await actionQueue;await store.close();},async response(url,request){
+  return {store,async close(){await previews.close();await actionQueue;await store.close();},async response(url,request){
     const [boardId,itemId,type]=url.pathname.slice(1).split('/');
-    const file=type==='thumb'?await thumbnail(boardId,itemId):type==='file'?await store.resolve(boardId,itemId):null;
+    let file=type==='thumb'?await thumbnail(boardId,itemId):['file','preview'].includes(type)?await store.resolve(boardId,itemId):null;
+    if(file&&type==='preview')file=await previews.ensure(file,fileKind(file));
     if(!file)return new Response('Not found',{status:404});return require('./media-response.cjs').mediaResponse(file,request);
   }};
 }

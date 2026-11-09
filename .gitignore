@@ -13,6 +13,9 @@ data/
 release/
 evidence/
 reference/
+output/
+.playwright-cli/
+docs/design/ai-discovery-v01/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal

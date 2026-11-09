@@ -107,3 +107,14 @@ body{padding-top:36px}#appBar{position:fixed;top:0;left:0;right:0;height:36px;di
 .appearance-dialog{width:480px;box-sizing:border-box;max-height:calc(100vh - 40px);overflow-y:auto}.appearance-groups{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}.appearance-groups button{font-size:12px;padding:6px 9px}.appearance-icons{grid-template-columns:repeat(4,minmax(0,1fr));min-height:0;gap:8px}.appearance-icons button{height:66px;display:flex;flex-direction:column;gap:6px;justify-content:center;align-items:center}.appearance-icons button>span:last-child:not(.tree-icon){font:11px 'Segoe UI',sans-serif;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.appearance-icons button[hidden]{display:none}.appearance-color-custom{display:flex;align-items:center;gap:14px;margin-top:14px}.appearance-color-custom label{display:flex;align-items:center;gap:8px;font-size:12px}.appearance-color-custom input[type=color]{width:36px;height:30px;padding:2px;cursor:pointer}.appearance-hex{width:94px;min-width:0}.appearance-groups[hidden]{display:none}
 
 .model-placeholder>.tree-icon{width:48px;height:48px;flex-basis:48px;margin-bottom:8px;background:transparent}.model-placeholder>.tree-icon svg{width:36px;height:38px}.model-placeholder>strong{font-size:18px;letter-spacing:1px}.model-placeholder>small{max-width:260px;text-align:center;line-height:1.5}
+
+/* A discoverable divider replaces the tiny native corner resize handle. */
+body>.sidebar{width:260px;min-width:190px;max-width:none;flex-shrink:0;resize:none;border-right:0}
+.sidebar-resizer{width:6px;flex:0 0 6px;position:relative;cursor:col-resize;touch-action:none;background:var(--panel);z-index:11;outline-offset:-2px}
+.sidebar-resizer::before{content:'';position:absolute;inset:0 2px;border-left:1px solid var(--line)}
+.sidebar-resizer::after{content:'';position:absolute;top:calc(50% - 17px);left:1px;width:3px;height:34px;border-radius:2px;background:var(--muted);opacity:.45}
+.sidebar-resizer:hover::before,.sidebar-resizer:focus-visible::before,.resizing-sidebar .sidebar-resizer::before{border-color:var(--accent)}
+.sidebar-resizer:hover::after,.sidebar-resizer:focus-visible::after,.resizing-sidebar .sidebar-resizer::after{background:var(--accent);opacity:1}
+.sidebar[hidden]+.sidebar-resizer{display:none}
+body.resizing-sidebar,body.resizing-sidebar *{cursor:col-resize!important;user-select:none!important}
+body.canvas-mode>.sidebar-resizer{display:none}

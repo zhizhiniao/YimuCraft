@@ -27,7 +27,9 @@ function fixture(reply=true){
   };
   const mod={exports:{}};
   vm.runInNewContext(fs.readFileSync(path.join(root,'src/adobe-bridge.cjs'),'utf8'),{module:mod,exports:mod.exports,__dirname:path.join(root,'src'),process:{env:{...process.env,USERPROFILE:dir}},require:name=>name==='node:child_process'?{spawn:fakeSpawn}:require(name),setTimeout,clearTimeout});
-  const bridge=new mod.exports.AdobeBridge(path.join(dir,'requests'),{executable:exe,timeout:80,poll:5});
+  // A successful fake reply must tolerate parallel-suite filesystem scheduling.
+  // Keep the short deadline only for the deliberate no-receipt timeout case.
+  const bridge=new mod.exports.AdobeBridge(path.join(dir,'requests'),{executable:exe,timeout:reply?5000:80,poll:5});
   return {dir,bridge,calls,com,cleanup:()=>fs.rmSync(dir,{recursive:true,force:true})};
 }
 

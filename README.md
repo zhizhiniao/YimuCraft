@@ -8,22 +8,19 @@
 
 面向视频创作者的 Windows 本地素材管理工具，提供素材整理、媒体预览，以及 After Effects / Premiere Pro 联动。
 
-> 最新源码：**0.7.63**（2026-10-31 同步）；当前下载安装包仍为 **0.7.56 开发者预览版**，标签 `v0.7.56-dev.1`。新版画布功能请使用源码构建；尚未完成完整兼容性、干净机器和用户体验验收。
+> **0.7.72 开发者预览版** · Windows x64 · 2026-11-08。GitHub 源码和下载安装包均为此版本。
 
-[下载安装包](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.56-dev.1) · [最新源码更新](docs/releases/0.7.63-source-update.md) · [0.7.56 说明与截图](docs/releases/v0.7.56-dev.1.md) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.72-dev.1/YimuCraft.Setup.0.7.72.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.72-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
 
-![0.7.56 实际运行界面：文件夹、音频波形与媒体预览](docs/images/v0.7.56/library.jpg)
+## 0.7.72 更新
 
-截图来自本机安装版，展示用户已有素材库；安装包不附带画面中的素材、API 配置或智能体权限。
+在左侧打开「找素材」，选一个已关联的项目仓库。先用名称或标签筛选，再输入“横屏”或“只看已确认”缩小范围。勾选 2–4 项可并排对比，选定的素材可以作为独立引用加入画布候选组，保留原文件与原编排。
 
-## 最近更新：0.7.57–0.7.63
+![0.7.72 打包应用的找素材界面，展示五张自动生成的测试图](docs/images/v0.7.72/discovery.png)
 
-- **项目画布**：直接关联项目目录，自动发现新素材；支持原比例预览、图片序列播放、标签、文字和连线，重开后恢复编排，减少反复找文件和重新排版。
-- **编排与分组**：左拖框选、中/右拖平移，支持嵌套、折叠和拖入/拖出自动归组；修正大组边框受限、四边难调整和连接点拥挤的问题。
-- **AE 按需联动**：移除闲置时每秒全工程扫描，改为点击刷新后执行一次。旧扫描已确认停用；用户仍报告的时间线周期卡顿尚未查明原因。
-- **图片传送**：新增可配置的右键发送；修正 Codex 粘贴按键链路。图片本体改用标准原文件拖放，外落或取消保留原布局；真实跨应用直接接收仍待验收。
+“以图找”按颜色和布局对当前项目的图片排序，每次最多比较 500 张。项目画布也新增了仓库切换、布局导航和排列预览。单图、多图都可直接拖动编排，按住 Alt 可向外传递原文件。详见[版本说明](docs/releases/v0.7.72-dev.1.md)。
 
-本轮核心测试 **133/133**、隐藏拖图回归 **10/10** 通过；119 个源文件与本机 0.7.63 安装内容一致。后台拖图使用模拟接收端，不代表所有外部应用兼容。本次只同步源码与文档，详见[更新说明](docs/releases/0.7.63-source-update.md)。下方截图仍为 0.7.56 实机记录。
+下方保留 0.7.56 的模型与智能体设置截图。
 
 | 模型 API 设置 | 智能体接入 |
 | --- | --- |
@@ -44,7 +41,7 @@
 
 ## 安装与开始使用
 
-1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.56-dev.1) 下载 `YimuCraft.Setup.0.7.56.exe`。
+1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.72-dev.1) 下载 `YimuCraft.Setup.0.7.72.exe`。
 2. 将安装包放在本机磁盘后运行，按向导完成安装。
 3. 打开“一幕 YimuCraft”，新建素材库或导入文件。首次安装不附带演示素材。
 4. 如需 Adobe 联动，按[使用说明](docs/USAGE.md)安装对应面板。
@@ -56,7 +53,7 @@
 下载页同时提供 `SHA256SUMS.txt`。在 PowerShell 中运行以下命令，将结果与校验文件对照：
 
 ```powershell
-Get-FileHash '.\YimuCraft.Setup.0.7.56.exe' -Algorithm SHA256
+Get-FileHash '.\YimuCraft.Setup.0.7.72.exe' -Algorithm SHA256
 ```
 
 ## 本地开发
@@ -106,7 +103,7 @@ work/                 临时测试数据，不提交 Git
 
 本项目原创代码与文档采用 [MIT 许可证](LICENSE)，允许使用、修改、分发及商业使用，须保留版权与许可声明；软件按原样提供，不附带保证。版权署名：蒋啊讲（zhizhiniao）。
 
-第三方组件、品牌图形与示例素材不因本项目采用 MIT 而改变原有权利与许可，见[第三方说明](THIRD_PARTY_NOTICES.md)。随包 FFmpeg 使用 GPLv3，不能将整个安装包笼统视为仅受 MIT 约束。MIT 声明从当前主分支引入；旧发布标签和安装包未重写，下载版本仍为 0.7.56 开发者预览版。
+第三方组件、品牌图形与示例素材不因本项目采用 MIT 而改变原有权利与许可，见[第三方说明](THIRD_PARTY_NOTICES.md)。随包 FFmpeg 使用 GPLv3，不能将整个安装包笼统视为仅受 MIT 约束。公开源码的 MIT 许可见根目录 LICENSE。
 
 YimuCraft 为独立实现项目，与 Adobe、Aetodo 无隶属或背书关系。仓库不包含原版程序包、专有源码和个人素材库。
 

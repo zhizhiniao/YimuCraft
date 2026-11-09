@@ -13,7 +13,7 @@ const env={...process.env,YIMU_DATA_DIR:path.join(run,'library'),YIMU_AE_CONNECT
 let app;const report={run,file};
 (async()=>{try{
  app=await electron.launch({executablePath:process.env.YIMU_TEST_EXE,args:[],env});
- const page=await app.firstWindow();await page.locator('#canvasTab').click();await page.locator('#canvasPath').fill(source);await page.locator('#canvasLink').click();await page.locator('.canvas-card').waitFor();
+ const page=await app.firstWindow();await require('./open-canvas-project.cjs')(app,page,source);await page.locator('.canvas-card').waitFor();
  await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setBounds({x:40,y:40,width:1150,height:900});w.setTitle('一幕 · 原生文件拖出验收');w.show();w.focus();});
  await page.evaluate(()=>document.querySelector('#canvasStage').style.marginBottom='260px');
  await page.locator('#canvasFit').click();await page.locator('.canvas-card').click();
