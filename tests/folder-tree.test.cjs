@@ -18,7 +18,7 @@ test('folder organization moves the whole visible branch, persists, and leaves f
     lib.db.exec('DROP TABLE folder_tree_parents; PRAGMA user_version=2');
     lib.close();
     lib = new Library(root);
-    assert.ok(fs.readdirSync(path.join(root, 'schema-backups')).some(n => n.includes('pre-v2-to-v3')));
+    assert.ok(fs.readdirSync(path.join(root, 'schema-backups')).some(n => n.includes('pre-v2-to-v'+require('../src/schema-migration.cjs').VERSION)));
     lib.organizeFolder(root, effects, presets);
     lib.organizeFolder(root, effects, presets);
     assert.equal(lib.query({folder:presets}).total, 3);
@@ -51,5 +51,55 @@ test('folder organization moves the whole visible branch, persists, and leaves f
     await assert.rejects(lib.removeEmptyFolder(empty),/文件夹不为空/);
     lib.organizeFolder(root,twin,'');
     await lib.removeEmptyFolder(empty);
+  } finally {lib.close();}
+});
+
+test('display names in referenced folders survive dragging, relinking, and restarting', async () => {
+  const run = fs.mkdtempSync(path.resolve('work/tree-rename-'));
+  const index = path.join(run,'index'), originals = path.join(run,'originals');
+  const effects = path.join(originals,'526种AE内置插件效果'), child = path.join(effects,'光效');
+  const target = path.join(originals,'AE预设'), sibling = path.join(target,'常用');
+  let lib = new Library(index);
+  try {
+    const files = [child,sibling].map(folder => {
+      fs.mkdirSync(folder,{recursive:true});
+      const file = path.join(folder,'测试.ffx');
+      fs.writeFileSync(file,'fixture');
+      return file;
+    });
+    await lib.importPaths(files);
+    lib.db.exec('DROP TABLE folder_tree_names; PRAGMA user_version=3');
+    lib.close(); lib = new Library(index);
+    assert.ok(fs.readdirSync(path.join(index,'schema-backups')).some(n => n.includes('pre-v3-to-v4')));
+    const original = lib.query().items;
+    await lib.renameFolder(effects,'常用',index);
+    assert.throws(()=>lib.organizeFolder(index,effects,target),/同名/);
+    await lib.renameFolder(effects,'效果预设',index);
+    lib.organizeFolder(index,effects,target);
+    await assert.rejects(lib.renameFolder(effects,'常用',index),/同名/);
+    await assert.rejects(lib.renameFolder(effects,'',index),/无效/);
+    await assert.rejects(lib.renameFolder(effects,'错库',index+'-other'),/切换/);
+    await assert.rejects(lib.renameFolder(path.join(run,'不存在'),'新名称',index),/刷新/);
+    await lib.renameFolder(child,'发光',index);
+    lib.close(); lib = new Library(index);
+    const tree=()=>{const data=lib.folderTreeData();return require('../src/folder-tree.cjs').buildTree(data,data.placements);};
+    assert.equal(tree().lookup(effects).name,'效果预设');
+    assert.equal(tree().lookup(child).name,'发光');
+    assert.equal(tree().lookup(effects).parent,target);
+    assert.equal(lib.query({folder:target}).total,2);
+    assert.deepEqual(lib.query().items,original);
+    for (const file of files) assert.equal(fs.readFileSync(file,'utf8'),'fixture');
+    const copy = path.join(run,'copy');
+    fs.cpSync(effects,copy,{recursive:true});
+    await lib.relink(effects,copy);
+    assert.equal(tree().lookup(copy).name,'效果预设');
+    assert.equal(tree().lookup(path.join(copy,'光效')).name,'发光');
+    await lib.renameFolder(copy,path.basename(copy),index);
+    assert.equal(tree().lookup(copy).name,path.basename(copy));
+    assert.equal(lib.db.prepare('SELECT count(*) n FROM folder_tree_names').get().n,1);
+    const owned = (await lib.createFolder('','托管')).path;
+    const renamed = await lib.renameFolder(owned,'托管新名',index);
+    assert.equal(fs.existsSync(owned),false);
+    assert.ok(fs.statSync(renamed.path).isDirectory());
   } finally {lib.close();}
 });

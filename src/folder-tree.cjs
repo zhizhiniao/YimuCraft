@@ -1,6 +1,11 @@
 const path = require('node:path');
 
-function buildTree({location, linkedSource, folders, folderPreferences}, placements) {
+function renamesOnDisk(location, folder) {
+  const {inside} = require('./library.cjs');
+  return ['managed','packages'].some(dir => inside(path.join(location,dir),folder));
+}
+
+function buildTree({location, linkedSource, folders, folderPreferences, folderNames = []}, placements) {
   const root = {path: '', children: [], count: 0, directCount: 0};
   const nodes = new Map();
   const hiddenRoots = [location, ...(linkedSource ? [path.join(linkedSource, 'source')] : [])];
@@ -24,7 +29,7 @@ function buildTree({location, linkedSource, folders, folderPreferences}, placeme
     if (hidden(folder)) return root;
     const directory = path.dirname(folder);
     const parent = directory === folder ? root : ensure(directory);
-    const node = {path: folder, name: path.basename(folder) || folder, naturalParent: parent.path,
+    const node = {path: folder, name: path.basename(folder) || folder, renamesOnDisk: renamesOnDisk(location,folder), naturalParent: parent.path,
       parent: parent.path, directCount: 0, count: 0, children: []};
     nodes.set(key, node);
     return node;
@@ -33,6 +38,10 @@ function buildTree({location, linkedSource, folders, folderPreferences}, placeme
   for (const pref of folderPreferences) ensure(path.resolve(pref.path));
 
   const lookup = folder => folder ? nodes.get(folder.toLowerCase()) : root;
+  for (const {source, name} of folderNames) {
+    const node = lookup(source);
+    if (node && node !== root) node.name = name;
+  }
   for (const item of placements) {
     const child = lookup(item.source), parent = lookup(item.parent);
     if (child && parent && child !== root) child.parent = parent.path;
@@ -106,6 +115,43 @@ function remapPlacements(db, remap) {
   const changed = rows.filter(row => remap(row.source) !== row.source || remap(row.parent) !== row.parent);
   for (const row of changed) db.prepare('DELETE FROM folder_tree_parents WHERE source=?').run(row.source);
   for (const row of changed) db.prepare('INSERT INTO folder_tree_parents VALUES(?,?)').run(remap(row.source), row.parent ? remap(row.parent) : '');
+  const names = db.prepare('SELECT source,name FROM folder_tree_names').all().filter(row => remap(row.source) !== row.source);
+  for (const row of names) db.prepare('DELETE FROM folder_tree_names WHERE source=?').run(row.source);
+  for (const row of names) db.prepare('INSERT INTO folder_tree_names VALUES(?,?)').run(remap(row.source),row.name);
 }
 
-module.exports = {buildTree, organize, remapPlacements};
+async function rename(lib, source, name, libraryPath, options) {
+  if (libraryPath !== lib.folder) throw Error('素材库已切换，请在当前库重新命名');
+  if (typeof source !== 'string' || !path.isAbsolute(source)) throw Error('请选择当前素材库的文件夹');
+  require('./folders.cjs').validName(name);
+  if (name.length > 255) throw Error('文件夹名称过长');
+  const owned = renamesOnDisk(lib.folder,source);
+  // Validate against the current displayed siblings, including branches moved by drag.
+  lib.db.exec('BEGIN IMMEDIATE');
+  try {
+    const data = lib.folderTreeData();
+    const {lookup} = buildTree(data,data.placements);
+    const node = lookup(source);
+    if (!node && !owned) throw Error('文件夹已变化，请刷新后重试');
+    if (node && lookup(node.parent).children.some(sibling => sibling !== node && sibling.name.toLowerCase() === name.toLowerCase())) {
+      throw Error('同级已有同名文件夹');
+    }
+    if (!owned) {
+      if (name === (path.basename(node.path) || node.path)) {
+        lib.db.prepare('DELETE FROM folder_tree_names WHERE source=?').run(node.path);
+      } else {
+        lib.db.prepare('INSERT INTO folder_tree_names(source,name) VALUES(?,?) ON CONFLICT(source) DO UPDATE SET name=excluded.name').run(node.path,name);
+      }
+    }
+    lib.db.exec('COMMIT');
+  } catch (error) {
+    if (lib.db.isTransaction) lib.db.exec('ROLLBACK');
+    throw error;
+  }
+  if (owned && name !== path.basename(source)) {
+    return lib.moveFolder(source,path.join(path.dirname(source),name),options);
+  }
+  return {path:source,name};
+}
+
+module.exports = {buildTree, organize, remapPlacements, rename, renamesOnDisk};

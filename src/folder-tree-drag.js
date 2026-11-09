@@ -54,7 +54,7 @@
       state.typeShortcut = null;
       await stats();
       await refresh();
-      status(parent ? '已移入 '+parent.split(/[\\/]/).pop() : '已移回文件夹根目录');
+      status(parent ? '已移入 '+folderLabel(parent) : '已移回文件夹根目录');
     } finally {
       saving = false;
     }

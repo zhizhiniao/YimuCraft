@@ -43,6 +43,7 @@ class Library {
     if(!this.db.prepare('PRAGMA table_info(assets)').all().some(x=>x.name==='missing'))this.db.exec('ALTER TABLE assets ADD COLUMN missing INTEGER NOT NULL DEFAULT 0');
     this.db.exec('CREATE TABLE IF NOT EXISTS external_assets(asset INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,source_id INTEGER)');
     this.db.exec('CREATE TABLE IF NOT EXISTS file_identity(asset INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,identity TEXT)');
+    this.db.exec("CREATE TABLE IF NOT EXISTS folder_tree_names(source TEXT PRIMARY KEY COLLATE NOCASE,name TEXT NOT NULL)");
     this.db.exec("CREATE TABLE IF NOT EXISTS folder_tree_parents(source TEXT PRIMARY KEY COLLATE NOCASE,parent TEXT NOT NULL)");
     this.db.exec("CREATE TABLE IF NOT EXISTS folder_preferences(path TEXT PRIMARY KEY,icon TEXT NOT NULL DEFAULT '▱')");
     for(const table of ['folder_preferences','collections'])for(const [column,defaultValue] of [['icon','folder'],['color','']])if(!this.db.prepare('PRAGMA table_info('+table+')').all().some(x=>x.name===column))this.db.exec("ALTER TABLE "+table+" ADD COLUMN "+column+" TEXT NOT NULL DEFAULT '"+defaultValue+"'");
@@ -136,9 +137,11 @@ this.db.exec('COMMIT');require('./trash.cjs').recover(this);}catch(e){this.db.cl
       location:this.folder,linkedSource,
       folderPreferences:this.db.prepare('SELECT path,icon,color FROM folder_preferences').all(),
       folders:this.db.prepare('SELECT folder,count(*) count FROM assets '+(includeHidden?'':'WHERE hidden=0 ')+'GROUP BY folder ORDER BY folder').all(),
+      folderNames:this.db.prepare('SELECT source,name FROM folder_tree_names').all(),
       placements:this.db.prepare('SELECT source,parent FROM folder_tree_parents').all()
     };
   }
+  renameFolder(source,name,libraryPath,options) {return folderTree.rename(this,source,name,libraryPath,options);}
   organizeFolder(libraryPath,source,parent) {return folderTree.organize(this,libraryPath,source,parent);}
   stats() {const data=this.folderTreeData();return {linkedSource:data.linkedSource,folderTree:folderTree.buildTree(data,data.placements).root.children,tagCounts:this.db.prepare('SELECT value tag,count(*) count FROM assets,json_each(assets.tags) WHERE hidden=0 GROUP BY value ORDER BY value').all(),folderPreferences:data.folderPreferences,total:this.db.prepare('SELECT count(*) n FROM assets WHERE hidden=0').get().n,collections:this.db.prepare('SELECT c.*,count(a.id) count FROM collections c LEFT JOIN collection_assets ca ON ca.collection=c.id LEFT JOIN assets a ON ca.asset=a.id AND a.hidden=0 GROUP BY c.id ORDER BY c.name').all(),folders:data.folders,roots:this.db.prepare('SELECT path FROM roots').all().map(x=>x.path),tags:this.db.prepare('SELECT DISTINCT value FROM assets,json_each(assets.tags) WHERE hidden=0 ORDER BY value').all().map(x=>x.value),formats:this.db.prepare('SELECT DISTINCT ext FROM assets WHERE hidden=0 ORDER BY ext').all().map(x=>x.ext),location:this.folder};}
   saveCollection(id,name,parent=null){name=String(name).trim();if(!name||name.length>100)throw Error('分类名须为 1–100 个字符');parent=parent?Number(parent):null;if(parent&&!this.db.prepare('SELECT id FROM collections WHERE id=?').get(parent))throw Error('上级分类不存在');if(id){id=Number(id);if(!this.db.prepare('SELECT id FROM collections WHERE id=?').get(id))throw Error('分类不存在');let p=parent;while(p){if(p===id)throw Error('分类不能移动到自身或子分类');p=this.db.prepare('SELECT parent FROM collections WHERE id=?').get(p)?.parent;}this.db.prepare('UPDATE collections SET name=?,parent=? WHERE id=?').run(name,parent,id);return {id};}return {id:Number(this.db.prepare('INSERT INTO collections(name,parent) VALUES(?,?)').run(name,parent).lastInsertRowid)};}

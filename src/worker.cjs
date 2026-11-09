@@ -6,7 +6,7 @@ parentPort.on('message',async ({id,command,args=[]})=>{
   if(busy){syncMessages.push({id,command,args});return;}
   busy=true;cancelled=false;
   if(!['query','stats','get','getMany','aiStatus','aiSearch','backup','duplicates','exportAetodo','exportPackage','exportZip'].includes(command))mutationRevision++;
-  try{if(!['receiveAEPackages','attachLibrary','collectPremiere','removePermanent','synchronize','query','stats','get','getMany','update','importPaths','importManaged','importAetodo','exportAetodo','exportPackage','exportZip','importZip','importPackage','relink','saveCollection','deleteCollection','assignCollection','setCover','backup','switchLibrary','restoreLibrary','renameTag','touch','duplicates','setPreview','indexVisual','rename','moveFolder','organizeFolder','createFolder','removeEmptyFolder','setFolderIcon','setFolderAppearance','setCollectionAppearance','aiStatus','aiInstall','aiIndex','aiSearch','aiTag'].includes(command))throw Error('未知命令');const report=p=>parentPort.postMessage({progress:p});let result;
+  try{if(!['receiveAEPackages','attachLibrary','collectPremiere','removePermanent','synchronize','query','stats','get','getMany','update','importPaths','importManaged','importAetodo','exportAetodo','exportPackage','exportZip','importZip','importPackage','relink','saveCollection','deleteCollection','assignCollection','setCover','backup','switchLibrary','restoreLibrary','renameTag','touch','duplicates','setPreview','indexVisual','rename','moveFolder','renameFolder','organizeFolder','createFolder','removeEmptyFolder','setFolderIcon','setFolderAppearance','setCollectionAppearance','aiStatus','aiInstall','aiIndex','aiSearch','aiTag'].includes(command))throw Error('未知命令');const report=p=>parentPort.postMessage({progress:p});let result;
     if(command==='receiveAEPackages')result=await require('./ae-package-inbox.cjs').receive(library,report);
     else if(command==='attachLibrary'){const replacement=new Library(args[1]);try{const linked=await require('./existing-library.cjs').attach(replacement,args[0],report);result={...replacement.stats(),...linked};}catch(e){replacement.close();throw e;}library.close();library=replacement;watchLibrary();}
     else if(command==='switchLibrary'||command==='restoreLibrary'){if(command==='restoreLibrary')await Library.restoreBackup(args[0],args[1]);const replacement=new Library(command==='restoreLibrary'?args[1]:args[0]);try{result=replacement.stats();}catch(e){replacement.close();throw e;}library.close();library=replacement;watchLibrary();}
@@ -17,6 +17,7 @@ parentPort.on('message',async ({id,command,args=[]})=>{
     else if(command==='aiIndex')result=await semantic.index(library,report,()=>cancelled,args[0]);
     else if(command==='aiSearch')result=await semantic.search(library,args[0],report);
     else if(command==='aiTag')result=await semantic.tag(library,args[0],args[1],report,()=>cancelled);
+    else if(command==='renameFolder')result=await library.renameFolder(args[0],args[1],args[2],{...args[3],report});
     else if(command==='moveFolder')result=await library.moveFolder(args[0],args[1],{...args[2],report});
     else if(command==='importManaged')result=await library.importManaged(args[0],report,()=>cancelled,args[1]);
     else if(command==='importPaths')result=await library.importPaths(args[0],report,()=>cancelled,args[1]);

@@ -36,7 +36,7 @@ async function fixture() {
   try {
     await attach(lib,linked);
     lib.setFolderAppearance(target,{icon:'type-ae',color:'#759cde'});
-    lib.db.exec('DROP TABLE folder_tree_parents; PRAGMA user_version=2');
+    lib.db.exec('DROP TABLE folder_tree_names; DROP TABLE folder_tree_parents; PRAGMA user_version=2');
   } finally {lib.close();}
 }
 
@@ -50,7 +50,7 @@ async function launch() {
   await page.waitForFunction(()=>document.querySelector('#status')?.textContent.startsWith('就绪'));
 }
 
-const button = folder => page.getByTitle(folder,{exact:true});
+const button = folder => page.locator('#folders').getByTitle(folder,{exact:true});
 async function mouseDrag(from,to,beforeUp) {
   const rect=await from.boundingBox(), dest=await to.boundingBox();
   assert.ok(rect && dest);
@@ -73,13 +73,41 @@ async function nested() {
   },[source,target]);
 }
 
+// Exercise the real row's context menu. Select its native action without opening an OS popup in CI.
+async function renameMenu(folder,activate=true) {
+  await app.evaluate(({Menu})=>{
+    const original=Menu.buildFromTemplate;
+    globalThis.folderRenameMenu=null;
+    Menu.buildFromTemplate=function(template){
+      Menu.buildFromTemplate=original;
+      const menu=original.call(Menu,template);
+      menu.popup=({callback})=>{
+        const item=menu.items.find(item=>item.label==='重命名');
+        globalThis.folderRenameMenu={enabled:item.enabled,choose:()=>{item.click();callback();},cancel:callback};
+      };
+      return menu;
+    };
+  });
+  await button(folder).click({button:'right'});
+  const enabled=await app.evaluate(async()=>{
+    for(let i=0;i<40 && !globalThis.folderRenameMenu;i++)await new Promise(resolve=>setTimeout(resolve,25));
+    return globalThis.folderRenameMenu.enabled;
+  });
+  if(activate){assert.ok(enabled);await app.evaluate(()=>globalThis.folderRenameMenu.choose());}
+  else await app.evaluate(()=>globalThis.folderRenameMenu.cancel());
+  return enabled;
+}
+
 (async()=>{
   try {
     await fixture();
     const original=fs.readFileSync(dbFile);
     await launch();
     assert.equal(await depth(source),await depth(target));
-    if (process.env.YIMU_EXPECT_NO_FOLDER_DRAG) {
+    if (process.env.YIMU_EXPECT_NO_FOLDER_RENAME) {
+      assert.equal(await renameMenu(source,false),false);
+      report.checks.push('0.7.73 disables Rename for a connected source folder');
+    } else if (process.env.YIMU_EXPECT_NO_FOLDER_DRAG) {
       await mouseDrag(button(source).locator('span').filter({hasText:sourceName}),button(target));
       assert.equal(await depth(source),await depth(target));
       report.checks.push('0.7.72 same mouse gesture leaves both at root');
@@ -118,6 +146,26 @@ async function nested() {
       assert.equal(await depth(source),await depth(target));
       assert.equal(await button(target).locator('.folder-count').textContent(),'1');
       report.checks.push('heading drop restores the root and original counts');
+      await renameMenu(source);
+      const input=page.locator('#folderName');
+      assert.equal(await input.inputValue(),sourceName);
+      await input.fill(parentName);await input.press('Enter');
+      await page.locator('#folderError').filter({hasText:'同名'}).waitFor();
+      await input.fill('AE效果合集');await input.press('Enter');
+      await button(source).filter({hasText:'AE效果合集'}).waitFor();
+      await page.waitForFunction(()=>document.querySelector('#location').textContent==='AE效果合集');
+      await page.locator('#folderSearch').fill('效果合集');
+      await button(child).waitFor();
+      assert.equal(await button(target).count(),0);
+      await page.locator('#folderSearch').fill('');
+      await mouseDrag(button(source),button(target));await nested();
+      await close(app);app=null;await launch();await nested();
+      await button(source).filter({hasText:'AE效果合集'}).waitFor();
+      await button(source).click();await page.keyboard.press('F2');
+      await page.locator('#folderDialog[open]').waitFor();assert.equal(await page.locator('#folderName').inputValue(), 'AE效果合集');
+      await page.locator('#folderName').fill(sourceName);await page.locator('#folderRename').click();
+      await button(source).filter({hasText:sourceName}).waitFor();
+      report.checks.push('connected folder context rename, duplicate rejection, search, drag, restart and restore');
     }
     assert.deepEqual(fs.readFileSync(dbFile),original);
     for (const [i,dir] of [source,child,target].entries()) assert.equal(fs.readFileSync(path.join(dir,'预设.ffx'),'utf8'),'fx-'+i);
