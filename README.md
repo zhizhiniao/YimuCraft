@@ -8,9 +8,13 @@
 
 面向视频创作者的 Windows 本地素材管理工具，提供素材整理、媒体预览，以及 After Effects / Premiere Pro 联动。
 
-> **0.7.73 开发者预览版** · Windows x64 · 2026-11-08。GitHub 源码和下载安装包均为此版本。
+> **0.7.74 开发者预览版** · Windows x64 · 2026-11-09。GitHub 源码和下载安装包均为此版本。
 
-[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.73-dev.1/YimuCraft.Setup.0.7.73.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.73-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.74-dev.1/YimuCraft.Setup.0.7.74.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.74-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+
+## 0.7.74 文件夹重命名
+
+在「素材库」左侧右键文件夹选「重命名」，或单击文件夹后按 **F2**。输入新名称，按 **Enter** 保存。连接库和外部引用目录只更改在一幕中的显示名，磁盘路径与 AE 引用保持原样。重新输入磁盘原名即可恢复。一幕托管目录会同步更改磁盘目录名和索引。[查看版本说明](docs/releases/v0.7.74-dev.1.md)
 
 ## 0.7.73 文件夹拖拽
 
@@ -47,7 +51,7 @@
 
 ## 安装与开始使用
 
-1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.73-dev.1) 下载 `YimuCraft.Setup.0.7.73.exe`。
+1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.74-dev.1) 下载 `YimuCraft.Setup.0.7.74.exe`。
 2. 将安装包放在本机磁盘后运行，按向导完成安装。
 3. 打开“一幕 YimuCraft”，新建素材库或导入文件。首次安装不附带演示素材。
 4. 如需 Adobe 联动，按[使用说明](docs/USAGE.md)安装对应面板。
@@ -59,7 +63,7 @@
 下载页同时提供 `SHA256SUMS.txt`。在 PowerShell 中运行以下命令，将结果与校验文件对照：
 
 ```powershell
-Get-FileHash '.\YimuCraft.Setup.0.7.73.exe' -Algorithm SHA256
+Get-FileHash '.\YimuCraft.Setup.0.7.74.exe' -Algorithm SHA256
 ```
 
 ## 本地开发
