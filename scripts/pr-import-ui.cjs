@@ -27,7 +27,9 @@ process.on('unhandledRejection', (reason) => {
     const bridge = new PremiereBridge();
     const before = await bridge.run('inspect');
     const projectPath = path.resolve(before.result.project);
-    assert.equal(projectPath, path.resolve('work/YimuCraft_PR_Test.prproj'), 'PR must have the owned test project active');
+    const expectedProject=path.resolve(process.env.YIMU_PR_TEST_PROJECT||'work/YimuCraft_PR_Test.prproj');
+    assert.ok(expectedProject.startsWith(path.resolve('work')+path.sep),'Test project must be inside work');
+    assert.equal(projectPath, expectedProject, 'PR must have the owned test project active');
     report.before = { items: before.result.items, version: before.result.version, project: projectPath };
 
     const env = { ...process.env, YIMU_DATA_DIR: path.join(root, 'library') };
@@ -43,14 +45,23 @@ process.on('unhandledRejection', (reason) => {
     // branch of the same right-click action.
     const batch = process.env.YIMU_BATCH === '1';
     report.batch = batch;
-    const mediaFiles = batch
+    const kinds = process.env.YIMU_MEDIA_KINDS?.split(',');
+    const mediaFiles = kinds ? kinds.map((kind, index) => {
+      assert.ok(['audio','video','image'].includes(kind));
+      const target=path.join(root, '右键导入 '+kind+({audio:'.wav',video:'.mp4',image:'.png'}[kind]));
+      const inputs=kind==='audio'?['-f','lavfi','-i','sine=frequency=550:duration=1']:
+        kind==='video'?['-f','lavfi','-i','color=c=blue:s=320x180:d=1','-pix_fmt','yuv420p']:
+        ['-f','lavfi','-i','color=c=orange:s=320x180','-frames:v','1'];
+      execFileSync(require('ffmpeg-static'),['-hide_banner','-loglevel','error','-y',...inputs,target],{windowsHide:true});
+      return target;
+    }) : batch
       ? ['导入PR 音频一.wav', '导入PR 音频二.wav'].map((name, index) => {
           const target = path.join(root, name);
           execFileSync(require('ffmpeg-static'), ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', `sine=frequency=${440 + index * 110}:duration=1`, target], { windowsHide: true });
           return target;
         })
       : [path.join(root, '导入PR 音频.wav')];
-    if (!batch) {
+    if (!batch&&!kinds) {
       execFileSync(require('ffmpeg-static'), ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', mediaFiles[0]], { windowsHide: true });
     }
     await page.evaluate((list) => window.yimu.command('import', list), mediaFiles);
@@ -62,7 +73,18 @@ process.on('unhandledRejection', (reason) => {
     }
 
     // Capture the real menu instead of showing a native popup.
-    await app.evaluate(({ Menu }) => {
+    const nativeMenu=process.env.YIMU_PR_NATIVE_MENU==='1';
+    if(nativeMenu){
+      const handle=await app.evaluate(({app,BrowserWindow})=>{
+        app.setAccessibilitySupportEnabled(true);
+        const window=BrowserWindow.getAllWindows()[0];
+        window.show();window.focus();
+        return Number(window.getNativeWindowHandle().readBigUInt64LE());
+      });
+      const activate="import win32gui as g,win32com.client as c,sys,time;h=int(sys.argv[1]);c.Dispatch('WScript.Shell').SendKeys('%');g.SetForegroundWindow(h);time.sleep(.1);assert g.GetForegroundWindow()==h";
+      execFileSync('python',['-c',activate,String(handle)],{windowsHide:true});
+    }
+    if(!nativeMenu)await app.evaluate(({ Menu }) => {
       const build = Menu.buildFromTemplate.bind(Menu);
       const hasSend = (items) =>
         items.some((item) => item.id === 'pr' || (item.submenu && hasSend(item.submenu.items)));
@@ -74,7 +96,22 @@ process.on('unhandledRejection', (reason) => {
     });
 
     await page.locator('.asset').first().click({ button: 'right' });
-    const clicked = await app.evaluate(async () => {
+    if(nativeMenu)execFileSync('python',['-c',"from PIL import ImageGrab;import sys;ImageGrab.grab().save(sys.argv[1])",path.join(root,'native-menu.png')],{windowsHide:true});
+    let clicked;
+    if(nativeMenu){
+      const script = [
+        'Add-Type -AssemblyName UIAutomationClient',
+        'Add-Type -AssemblyName UIAutomationTypes',
+        "$root=[System.Windows.Automation.AutomationElement]::RootElement",
+        "$condition=[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty,'发送到 Premiere Pro')",
+        '$deadline=[DateTime]::UtcNow.AddSeconds(6)',
+        'do{$item=$root.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$condition);if(!$item){Start-Sleep -Milliseconds 150}}while(!$item -and [DateTime]::UtcNow -lt $deadline)',
+        "if(!$item){throw 'Native Premiere menu item missing'}",
+        '$item.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()'
+      ].join('\n');
+      execFileSync('powershell.exe',['-NoProfile','-EncodedCommand',Buffer.from(script,'utf16le').toString('base64')],{windowsHide:true,timeout:15000});
+      clicked='clicked';
+    }else clicked = await app.evaluate(async () => {
       for (let i = 0; i < 60 && !global.__yimuPrMenu; i++) await new Promise((r) => setTimeout(r, 50));
       if (!global.__yimuPrMenu) return 'menu not captured';
       const item = global.__yimuPrMenu.items.find((x) => x.id === 'pr');
@@ -83,6 +120,8 @@ process.on('unhandledRejection', (reason) => {
       return 'clicked';
     });
     report.menu = clicked;
+    report.nativeMenu = nativeMenu;
+    report.mediaKinds = kinds;
     assert.equal(clicked, 'clicked', 'Could not invoke the Premiere menu item');
 
     let status = '';
@@ -91,9 +130,17 @@ process.on('unhandledRejection', (reason) => {
     for (let i = 0; i < 60; i++) {
       await new Promise((r) => setTimeout(r, 500));
       status = await page.evaluate(() => document.querySelector('#status').textContent);
-      after = await bridge.run('inspect');
-      if (after.result.items >= report.before.items + expected) break;
+      if (status.includes('PR 已确认接收素材')) break;
     }
+    assert.match(status,/PR 已确认接收素材/,'Product action did not confirm import');
+    assert.doesNotMatch(status,/窗口未切换/);
+    if(process.env.YIMU_PR_TEST_FOREGROUND==='1'){
+      const probe="import win32gui as g,win32process as p,json;h=g.GetForegroundWindow();print(json.dumps({'pid':p.GetWindowThreadProcessId(h)[1],'title':g.GetWindowText(h)}))";
+      report.foreground=JSON.parse(execFileSync('python',['-c',probe],{encoding:'utf8',windowsHide:true}));
+      assert.ok(report.foreground.title.startsWith('Adobe Premiere'),report.foreground.title);
+      report.checks.push('Windows foreground belongs to Premiere after successful menu action');
+    }
+    after = await bridge.run('inspect');
     report.status = status;
     report.after = { items: after.result.items, project: path.resolve(after.result.project) };
     assert.equal(report.after.project, projectPath, 'Premiere switched away from the owned test project');
@@ -115,7 +162,7 @@ process.on('unhandledRejection', (reason) => {
   } finally {
     await close(app);
     report.lateErrors = lateErrors;
-    fs.writeFileSync('evidence/pr-import-ui.json', JSON.stringify(report, null, 2));
+    fs.writeFileSync(path.join(root,'report.json'), JSON.stringify(report, null, 2));
     console.log(JSON.stringify(report, null, 2));
     process.exitCode = report.passed ? 0 : 1;
   }

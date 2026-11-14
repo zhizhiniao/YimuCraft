@@ -19,7 +19,7 @@ class PremiereBridge{
  async run(operation,payload={}){
   if(this.busy)throw Error('PR 操作正在执行');if(this.pending())throw Error('PR 上次操作结果待确认；请在 Adobe 菜单处理 PR 未决操作，勿重复提交');if(!['inspect','import','mogrt','lut','lutAdjustment','collectCurrent','openProject','fixture'].includes(operation))throw Error('不支持的 PR 操作');
   let heartbeat;try{heartbeat=JSON.parse(fs.readFileSync(path.join(this.directory,'heartbeat.json'),'utf8'));}catch{}
-  if(!heartbeat||Date.now()-heartbeat.time>5000)throw Error('请在 PR 的“窗口→扩展”中打开“一幕 YimuCraft”面板');
+  if(!heartbeat||!Number.isFinite(heartbeat.time)||Math.abs(Date.now()-heartbeat.time)>5000)throw Error('PR 后台连接尚未就绪。请打开 Premiere Pro 和目标工程；首次安装或更新连接后须重启一次 PR。仍未连接时，可在一幕的 Adobe 菜单中修复 PR 后台连接');
   this.busy=true;const id=crypto.randomUUID(),request=path.join(this.directory,id+'.request.json'),response=path.join(this.directory,id+'.response.json');
   try{
    // Persist before publishing. wx excludes another application/client process.

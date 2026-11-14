@@ -14,7 +14,7 @@ using Accessibility;
 using System.Windows.Forms;
 
 class Target {public string id,name,process,pathHint,title,format;}
-class Request {public string action; public Target target; public string[] files;}
+class Request {public string action, project; public Target target; public string[] files;}
 class Window {public long handle;public string process,path,title;}
 class YimuTransfer {
  delegate bool EnumProc(IntPtr window,IntPtr param);
@@ -43,6 +43,28 @@ class YimuTransfer {
  static readonly JavaScriptSerializer json=new JavaScriptSerializer();
  static List<Window> Windows(){var result=new List<Window>();EnumWindows((h,p)=>{try{if(!IsWindowVisible(h))return true;var title=new StringBuilder(1024);GetWindowText(h,title,1024);if(title.Length==0)return true;uint pid;GetWindowThreadProcessId(h,out pid);var file=ProcessPath(pid);if(file.Length>0)result.Add(new Window{handle=h.ToInt64(),process=Path.GetFileNameWithoutExtension(file),path=file,title=title.ToString()});}catch{}return true;},IntPtr.Zero);return result;}
  static bool Contains(string text,string match){return string.IsNullOrEmpty(match)||(text??"").IndexOf(match,StringComparison.OrdinalIgnoreCase)>=0;}
+ static void FocusPremiere(string project) {
+   var candidates = Windows().Where(w => String.Equals(w.process,"Adobe Premiere Pro",StringComparison.OrdinalIgnoreCase)).ToArray();
+   if (candidates.Length > 1 && !String.IsNullOrEmpty(project))
+    candidates = candidates.Where(w => Contains(w.title, project)).ToArray();
+   if (candidates.Length != 1) throw new Exception("无法确定接收素材的 PR 窗口");
+   var window = new IntPtr(candidates[0].handle);
+   uint hostPid;
+   GetWindowThreadProcessId(window, out hostPid);
+   if (IsIconic(window)) ShowWindow(window, 9);
+   SetForegroundWindow(window);
+   var wait = Stopwatch.StartNew();
+   do {
+    uint foregroundPid;
+    GetWindowThreadProcessId(GetForegroundWindow(), out foregroundPid);
+    if (foregroundPid == hostPid && !IsIconic(window)) {
+     Console.Write(json.Serialize(new {ok=true, pid=hostPid}));
+     return;
+    }
+    Thread.Sleep(25);
+   } while (wait.ElapsedMilliseconds < 400);
+   throw new Exception("Windows 未将 PR 切到前台");
+ }
  static void Send(Request request){
   var t=request.target;if(t==null||request.files==null||request.files.Length==0||request.files.Length>100)throw new Exception("传图参数无效");
   foreach(var file in request.files)if(!Path.IsPathRooted(file)||!File.Exists(file))throw new Exception("原文件不存在，未发送");
@@ -71,5 +93,5 @@ class YimuTransfer {
   if(format=="image"&&files.Length==1){try{using(var image=Image.FromFile(files[0])){var png=new MemoryStream();image.Save(png,System.Drawing.Imaging.ImageFormat.Png);png.Position=0;data.SetData("PNG",false,png);data.SetData(DataFormats.Bitmap,true,new Bitmap(image));}}catch(ArgumentException){} }
   Clipboard.SetDataObject(data,true,5,60);
  }
- [STAThread] static void Main(){Console.InputEncoding=Encoding.UTF8;Console.OutputEncoding=new UTF8Encoding(false);try{var request=json.Deserialize<Request>(Console.In.ReadToEnd());if(request.action=="windows")Console.Write(json.Serialize(new {windows=Windows()}));else if(request.action=="send")Send(request);else throw new Exception("未知操作");}catch(Exception e){Console.Write(json.Serialize(new {error=e.Message}));}}
+ [STAThread] static void Main(){Console.InputEncoding=Encoding.UTF8;Console.OutputEncoding=new UTF8Encoding(false);try{var request=json.Deserialize<Request>(Console.In.ReadToEnd());if(request.action=="windows")Console.Write(json.Serialize(new {windows=Windows()}));else if(request.action=="send")Send(request);else if(request.action=="focusPremiere")FocusPremiere(request.project);else throw new Exception("未知操作");}catch(Exception e){Console.Write(json.Serialize(new {error=e.Message}));}}
 }

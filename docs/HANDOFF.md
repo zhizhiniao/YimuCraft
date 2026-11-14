@@ -1,5 +1,11 @@
 # YimuCraft 项目主档与 Agent 交接
 
+**2026-11-13 GitHub 0.7.76 发布同步** · 本人已授权公开源码、安装包及说明，并更新 NAS Obsidian 公众号主稿下载链接。版本 `v0.7.76-dev.1`，沿用已安装验证的产物；[版本说明](releases/v0.7.76-dev.1.md) · [发布检查](RELEASE-CHECK-0.7.76.md)。最终公开回执见末尾本轮日志，下方记录保留各阶段状态。
+
+**2026-11-14 找素材与画布交互（0.7.76 已本机安装）** · 找素材接入当前素材库并收起过程记录；说明/文字合并入口，节点内编辑；连线旁 × 断开。核心 161、源码/安装新 UI 各 10、旧找素材 12、旧编辑 11 项通过；安装隔离库交互通过，桌面真实 65,586 项库已只读核验。详见 [本轮记录](CANVAS-UX-20261114.md)。
+
+**2026-11-13 PR 后台导入（0.7.75 已本机安装）** · 改为 PR 启动时加载隐藏 CEP，导入回执后切换前台并选中新素材。安装版音频、视频、图片与混合批量真实原生菜单均通过，Windows 前台 PID 确认为 PR；冷启动与源副本离线重开通过。详见末尾本轮日志。
+
 **2026-11-09 文件夹重命名（0.7.74 开发者预览版）** · 连接库可用右键或 F2 修改显示名，托管目录继续实际重命名。[操作说明](USAGE.md) · [GitHub 安装包与版本说明](releases/v0.7.74-dev.1.md)。
 
 **2026-11-08 文件夹拖拽（0.7.73）** · 素材库左侧支持拖入目标与拖回根目录，重开保留。下载、索引升级与回退见[版本说明](releases/v0.7.73-dev.1.md)。
@@ -205,7 +211,7 @@ worker_threads 承担数据工作，使用 Node 内置 node:sqlite 与 WAL。命
 
 **AE**：adobe-bridge.cjs 调 AfterFX -r 执行自有 adobe-host.jsx，以 ID 匹配 JSON 回执；收集/验证/夹具采用隔离实例参数。依赖通过 AE 原生能力处理，不能仅复制 .aep 就称工程可迁移。
 
-**PR**：premiere-bridge.cjs 与 src/premiere-panel/ 自有 CEP 面板使用本地请求/响应文件及心跳，宿主脚本调用 ExtendScript/QE。默认桥目录在用户 Documents/YimuCraft/premiere-bridge，可由 YIMU_PR_BRIDGE_DIR 指定。面板须打开；90 秒等待超时不代表宿主已停止。
+**PR**：premiere-bridge.cjs 与 src/premiere-panel/ 自有隐藏 CEP 连接使用本地请求/响应文件及心跳，宿主脚本调用 ExtendScript/QE。默认桥目录在用户 Documents/YimuCraft/premiere-bridge，可由 YIMU_PR_BRIDGE_DIR 指定。0.7.75 起由 PR 启动事件自动加载；首次升级须重启一次 PR。90 秒等待超时不代表宿主已停止。
 
 LUT 使用自有 assets/adjustment.prproj 和遮罩素材生成真实调节层，插入前检查空轨区间，设置 Lumetri 后验原生导出像素及重开结果。模板不是原版专有项目。
 
@@ -300,7 +306,7 @@ Adobe 脚本须先读工程路径、离线改名和 finally 恢复逻辑，不�
 8. **安装版校验要指明目录**：`scripts/installed-build.cjs` 支持 `YIMU_INSTALL_DIR`（默认 `%LOCALAPPDATA%\Programs\YimuCraft`）；`scripts/file-sync-ui.cjs` 现记录 `launchMode` 与 `execPath`，用于证明跑的是安装版而非源码。
 9. NSIS 静默安装需带工作区 TEMP 与 ` /D=<目标目录>`（`/D` 必须是最后一个参数且不加引号）。
 11. **从 K: 工作区启动的程序被禁止写用户目录**：实测 `node_modules\electron\dist\electron.exe`、`work\installed-0.7.28\YimuCraft.exe` 写 `C:\Users\Administrator\**`（含 TEMP、APPDATA、Documents）一律 `EPERM`，而真实安装位置的 `C:\Users\...\Programs\YimuCraft\YimuCraft.exe` 与 `node.exe` 可以写。本机装有腾讯电脑管家系统防护。**涉及用户目录或 PR 桥目录的验证必须用真实安装位置的 EXE**；从 K: 跑的副本只能用于 YIMU_DATA_DIR 指向工作区的场景。
-12. **PR 导入依赖 CEP 面板在线**：桥目录 `Documents\YimuCraft\premiere-bridge\heartbeat.json` 超过 ~15 秒未更新时，任何 Pr 操作都会报「请在 PR 的窗口→扩展中打开一幕 YimuCraft 面板」。面板由 manifest `AutoVisible` 在 PR 启动时自动打开；PR 是 Qt 应用，UIA/脚本点不了菜单，只能由用户点开或重启 PR。
+12. **PR 后台连接（0.7.75 起）**。隐藏 CEP 通过 StartOn 的 ApplicationActivate 启动，已在 PR 26.0 冷启动验证。桥目录 Documents/YimuCraft/premiere-bridge，心跳超过 5 秒会提示检查后台连接。普通一幕启动自动更新扩展，升级后须重启一次 PR。
 10. **本机桌面可能被并发使用**：空转实测指针会自行漂移（700ms 内漂移 268 px）。指针测试因此改为「连续两次读数一致才算到位」并允许 10 次重试；偶发失败先怀疑外部干扰，不要直接判为产品缺陷。
 13. **DSH 注入 `ELECTRON_RUN_AS_NODE=1`**：从本会话命令行启动 `YimuCraft.exe` 会按 Node 运行并立即退出（无输出、exit 0；带 Electron 参数时报 `bad option`、exit 9）。启动安装版前先 `Remove-Item Env:ELECTRON_RUN_AS_NODE`；`scripts/test-app.cjs` 已显式删除。
 14. **DSH 的 yimucraft MCP 子进程占用安装目录**：宿主以 `YimuCraft.exe app.asar\src\agent-mcp.cjs --connection ...` 常驻并在被杀后立即重连，会锁住 `YimuCraft.exe` 与 `app.asar`，此时 NSIS 静默安装 exit 2。不得把它当主程序强杀后反复安装；本次处理是停止后在同一个循环内重命名 `YimuCraft.exe`，安装 exit 0 后再删除旧名。安装后宿主会用新 EXE 重新拉起 MCP。
@@ -1290,3 +1296,52 @@ PR 媒体可能关工程仍占用；EPERM 移动失败已验证保留源目录�
 - 验证：复核前次核心 157/157、安装交互 7/7，当前 133 个 src 文件逐字节匹配本机安装内容。REA 对 NSIS 安装包静态检查，SHA-256 与构建及安装记录一致；证据目录 `work/github-0.7.74-1794207952429`。
 - 附件与边界：安装包 `YimuCraft.Setup.0.7.74.exe`，SHA-256 为 `68ff6ca8883ca36ae9a8ea0ee90db7601f3996609bd06193e26f20257a684399`。安装包未签名，干净机器未验。回退请使用旧版安装包，在独立目录恢复升级前的 v3 快照。
 - 发布回执：标签对应提交 `c68d1f3`。GitHub 预发布已公开，安装包 199,547,134 字节，服务端两个附件的 SHA-256 与本地一致。首次 curl TLS 握手失败；随后匿名下载校验文件返回 HTTP 200，安装包范围请求返回 HTTP 206，头部 MZ 和总大小一致。
+
+
+### 2026-11-13 — Premiere 后台连接与导入后切换 / Codex
+
+- 关联 D01 / P2。用户确认旧版须手动打开 PR 面板，发送后须自行切换窗口。当前 PR 26.0.0、一幕 0.7.74，旧 heartbeat 0.5.0；REA 定向分析已安装 panel.js，证据 ev_310b98bc58e9780ac9c60a4604b5d5a5070b2415e76cce426cd3bdce3494873f，仅静态分析自有扩展。
+- 变更为 0.7.75。单一隐藏 CEP 消费请求，StartOn 监听 Adobe 启动事件；普通启动自动更新自有扩展。导入后选中当前工程新增条目，收到成功回执后用本地原生帮助程序置前 PR。原有超时未决锁保留，前台失败仍报告导入成功。
+- 文件涉及 premiere-panel、premiere-bridge/install、main、canvas-transfer、native/YimuTransfer、版本文件、pr-import-ui 与 premiere-panel 测试。工程审查覆盖第三方联动、IPC、超时防重放、安装资源、真实文件及界面回归。
+- 进度与已知失败保存在 work/pr-background-1794623119。旧 manifest 自启动回归先失败后通过；核心 158/158，补安装修复用例后桥接 9/9。冷启动隐藏连接 0.6.0 已确认，音频/视频菜单导入已通过。图片导入完成但前台定位失败，已改用原生窗口枚举定位，待最终安装回归。
+- 用户已明确允许保存并重启当前工程，保存时间及 SHA-256 记录 saved.json。测试只在 work 下独立工程和隔离库进行；完成后恢复用户工程。
+- 首次 COM ShellExecute 启动 PR 出现 PlugPlugSetup，改用 Explorer 直接打开自有工程恢复。首次 NSIS 生成卸载器 exit 2，构建进程使用工作区 TEMP 后成功。日志及首次失败均保留。
+- 回退使用 0.7.74 安装包与 previous-cep 扩展副本，保存工程后重启 PR；本次不变更索引 schema。公开发布、干净电脑、其他 PR 版本尚未验收。
+- 接续为最终安装版单项、混合批量、真实原生菜单、前台 PID、工程重启持久化、恢复用户工程及源码一致性核验。
+
+- 最终安装回归通过。原生窗口枚举替代 .NET MainWindowHandle 后，图片 5→6、音频 6→7、视频 7→8、混合三项 8→11 均成功，前台 PID 74156。混合前最小化 PR，发送后恢复；截图确认新增三项被选中。原生菜单通过系统 UIA Invoke，右键由素材卡触发，前置测试校准系统焦点。
+- 持久化通过。保存独立工程，整进程重开 11 项；再将 9 个测试源文件改名离线，第二次重开仍为 11 项，保存工程引用均为隔离库 managed 文件。原用户素材未参与测试。
+- 最终核心 159/159、桥接专项 9/9。最终 NSIS exit 0，注册 0.7.75，134 个 src 文件与安装 ASAR 逐字节一致，native EXE 同步验证。安装器 SHA-256 2BADF75C6793CECA303A5F7A84ECADF901D5FBA2C77B0CEC7D75173AC1CD6F95。回执 evidence/upgrade-20261113-193615-841/install.json。
+- 历史失败更正。首次图片传输本身已完成，失败在切换窗口，回执保留且未自动重放。原生菜单测试中两次因测试进程未获得系统焦点而找不到菜单，增加明确前台句柄校准后通过。首次截图因最小化/多显示器 DPI 取错边界，重拍后的实际 PR 项目面板已查看。
+
+- 已恢复正常使用。测试源副本全部复位，原用户工程已重开，原 6 个根条目与活动序列一致，磁盘工程 SHA-256 与经用户授权保存后的值一致。一幕经 Explorer 正常启动为 0.7.75；本机最终已完成首次升级重启。
+- 启动机制采用 Adobe 官方隐藏扩展示例中的 Custom、AutoVisible=false 和 ApplicationActivate。参考 [Adobe CEP 示例](https://github.com/Adobe-CEP/CEP-Resources/blob/master/CEP_10.x/Samples/CEP_HTML_Invisible_Extension-10.0/CSXS/manifest.xml)。
+- 经验候选待确认。行动为将 PR 接收器改为隐藏自启动并读取前台 PID；结果是三类素材与混合发送、宿主重启通过；原因是可见面板生命周期和导入回执不能覆盖操作后的焦点；验收看冷启动、真实菜单、项目条目、前台 PID；反例是只查 API 成功；边界是本机 PR 26.0 与已启用 CEP 调试环境。
+- 最终接续仅为用户日常手感、其他机器与 PR 版本验证。MOGRT/LUT/收集沿用既有实现，本轮未复测；本机开发版本尚未公开发布。
+
+### 2026-11-14 — 素材库搜索、原位文字与直接断联 / Codex
+
+- 原因：用户反馈找素材只搜项目且记录占空间，文字/说明重复与大编辑框，断联依赖右键。按三项明确授权修复，不改用户素材库。
+- 前后行为、文件与验收见 [本轮记录](CANVAS-UX-20261114.md)。涉及 canvas-discovery-ui/css、library-discovery、worker/main、canvas-discovery、project-canvas/ipc/ui/css、三个 UI 脚本与新增核心用例。
+- REA 仅分析自有安装 ASAR；工程检查覆盖 IPC、来源/库切换、分页、事务和 UI。源码核心 161、新 UI 10、旧找素材 12、旧编辑 11 通过。失败证据保留并记录测试同步修正。
+- 当前为 0.7.76 源码；安装、正常配置大库检查尚待后续。旧 note/text 元数据保留，无 schema 变化；回退 0.7.75。未发布，语义索引质量与视频整段理解不计入通过。
+- 下一步：构建门禁、本机安装、安装版交互与正常配置检查，更新此条结果。经验候选见本轮记录，未经确认不升级为经验事实。
+
+- 最终本机安装通过：0.7.76，注册、ASAR 与 135 个 src 文件逐字节一致。最终安装器 SHA-256 `C1886AEBE1CA31F30458D96E88BA945B27C1CD3203164343CBB4F71195E72A90`；回执 `evidence/upgrade-20261113-202316-365/install.json`。
+- 安装程序实际 EXE 隔离交互 10 项通过，含应用重启、透明图片占位消失；`work/canvas-ux-20261114/installed-visual-final.log`。最后两项 UI 小修后只重跑定向 UI 与打包，核心门禁沿用本轮 161/161。
+- 更正：此段原标“正常配置”，实际为 Codex 虚拟配置。该配置实测通过：65585 项素材库，素材库默认范围，横屏图片首批 60 项与继续查找。逐项比对原画布所有节点/连线/视角与当前项目，偏好及库路径文件逐字节相同；`normal-report.json`、`normal-library-search.png`。退出测试后经 Explorer 重新打开正式程序；其使用另一份配置，实际保留 Data 画布。
+- Codex 虚拟配置只读采样：首批 60 项约 326ms；横屏检查 86 项找到 60 项，约 1472ms。这是一次本机采样，不推断全部格式或所有机器性能。范围与语义质量边界见本轮记录。
+- 补充失败与修正：正常窗口多显示器下 Computer Use 点击菜单不稳定，未另行运行强制结束命令；转用既有本地 NSIS 升级脚本完成退出/更新，确认偏好未改。透明 PNG 下格式占位可透出，增加图片加载成功后隐藏占位；查询中禁用快捷条件，避免无反馈点击。中间包、日志及旧验收副本保留于本轮 work 目录。
+- 完成范围为本机实现与验收，未公开发布。用户日常手感、其他机器及语义模型搜索质量仍未验。
+
+- 最终配置校正：同一逻辑 AppData 路径在 Codex 子进程内被 Windows 包虚拟化，Explorer 正式一幕使用物理 Roaming 配置。经 `\\localhost\C$` 只读访问确认桌面实际库 65586 项，首批与横屏均返回 60 项；证据 `desktop-library-query.json`。此前 `normal-report.json` 的 65585 项及逐项不变比对仅属于 Codex 虚拟配置，不能用于证明桌面配置。
+- 实际桌面已重新打开 0.7.76，窗口可见唯一“＋文字”入口，保持 Data 画布。真实 Data 2902 个记录、6 条连线；节点、连线、视角与最近本机备份相同，不将该备份对比表述为完整升级前基线。
+- Computer Use 菜单/选项卡点击受当前多显示器输入校准限制，桌面实际找素材页面未完成端到端 GUI 验证。隔离安装 EXE 10 项和重启、源文件哈希，以及真实库只读查询为本轮通过范围；用户本人手感仍待验。
+
+### 2026-11-13 — GitHub 0.7.76 与公众号文章链接同步 / Codex
+
+- 原因/范围：本人要求更新 GitHub 版本与说明，并同步 Obsidian 用于公众号的主稿链接。公开版本由 0.7.74 更新至 0.7.76，包含 PR 后台连接、素材库查找、原位文字和连线断开；不发布公众号正文。
+- 文件：本轮产品源码、定向测试、README、CHANGELOG、USAGE、PARITY、GITHUB-GUIDE、v0.7.76-dev.1 发布说明和 RELEASE-CHECK-0.7.76。保留历史记录阶段边界，公开维护记录省略当前用户工程名称。
+- 验证：当前 135 个 src 文件与构建/安装 ASAR 一致；安装包摘要为 c1886aebe1ca31f30458d96e88ba945b27c1cd3203164343cbb4f71195e72a90。REA 识别与摘要一致，白名单/令牌模式检查通过。依赖审计有 2 个中危传递依赖，当前 SDK stdio 路径未加载对应模块，适用性与后续边界见发布检查。
+- 边界/回退：沿用已有本机安装与宿主验收，不因文档发布重复安装；无依赖、schema 或权限变更。旧公开标签/附件保留，PR 连接回退需旧版重装面板并重启；未覆盖用户数据。
+- 下一步：推送源码、发布预览版及两个附件，核对服务端 SHA-256 和匿名下载，再修改唯一主稿的版本/链接并记录最终回执。证据目录 work/github-0.7.76-20261113。

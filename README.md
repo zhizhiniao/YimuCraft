@@ -8,9 +8,17 @@
 
 面向视频创作者的 Windows 本地素材管理工具，提供素材整理、媒体预览，以及 After Effects / Premiere Pro 联动。
 
-> **0.7.74 开发者预览版** · Windows x64 · 2026-11-09。GitHub 源码和下载安装包均为此版本。
+> **0.7.76 开发者预览版** · Windows x64 · 2026-11-13。GitHub 源码和下载安装包均为此版本。
 
-[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.74-dev.1/YimuCraft.Setup.0.7.74.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.74-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.76-dev.1/YimuCraft.Setup.0.7.76.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.76-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+
+## 0.7.76 找素材、画布与 PR 导入
+
+- **找素材**默认搜索当前素材库，也可切换项目。名称、路径、标签和备注都能查；横竖屏读取原文件尺寸，无须预先打标签。筛选条件集中显示，历史收进独立入口。
+- **文字**双击后直接在画布节点内编辑，Ctrl+Enter 或点击外部保存，Esc 取消；新建入口合并为一个。靠近**连线**显示 ×，也可选中后按 Delete 断开。
+- **发送到 Premiere Pro**使用随宿主启动的后台连接；首次升级后保存工程并重启 PR 一次。之后直接右键发送图片、音频和视频，成功后自动切到 PR 并选中新素材。
+
+本机 PR 26.0 与安装版隔离库已验证；语义搜索质量、其他 PR 版本和干净机器仍待验证。详见[版本说明](docs/releases/v0.7.76-dev.1.md)。下方旧版本截图保留其原版本标注。
 
 ## 0.7.74 文件夹重命名
 
@@ -24,11 +32,11 @@
 
 ## 0.7.72 找素材
 
-在左侧打开「找素材」，选一个已关联的项目仓库。先用名称或标签筛选，再输入“横屏”或“只看已确认”缩小范围。勾选 2–4 项可并排对比，选定的素材可以作为独立引用加入画布候选组，保留原文件与原编排。
+0.7.72 首次提供项目范围查找。当前 0.7.76 默认查素材库，下拉可切换项目；先用名称或标签筛选，再加“横屏”等条件。项目范围还可选“只看已确认”。勾选 2–4 项可并排对比，选定素材可以作为独立引用加入画布候选组，保留原文件与原编排。
 
 ![0.7.72 打包应用的找素材界面，展示五张自动生成的测试图](docs/images/v0.7.72/discovery.png)
 
-“以图找”按颜色和布局对当前项目的图片排序，每次最多比较 500 张。项目画布也新增了仓库切换、布局导航和排列预览。单图、多图都可直接拖动编排，按住 Alt 可向外传递原文件。详见[版本说明](docs/releases/v0.7.72-dev.1.md)。
+项目“以图找”按颜色和布局排序，每次最多比较 500 张；当前素材库范围改用已有本地语义索引，须先下载模型并建立索引。项目画布支持仓库切换、布局导航和排列预览；单图、多图直接拖动编排，按住 Alt 可向外传递原文件。早期实现见[0.7.72 说明](docs/releases/v0.7.72-dev.1.md)。
 
 下方保留 0.7.56 的模型与智能体设置截图。
 
@@ -51,10 +59,10 @@
 
 ## 安装与开始使用
 
-1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.74-dev.1) 下载 `YimuCraft.Setup.0.7.74.exe`。
+1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.76-dev.1) 下载 `YimuCraft.Setup.0.7.76.exe`。
 2. 将安装包放在本机磁盘后运行，按向导完成安装。
 3. 打开“一幕 YimuCraft”，新建素材库或导入文件。首次安装不附带演示素材。
-4. 如需 Adobe 联动，按[使用说明](docs/USAGE.md)安装对应面板。
+4. 如需 Adobe 联动，按[使用说明](docs/USAGE.md)完成设置。PR 后台连接由一幕自动安装，首次升级后需重启 PR 一次；AE 仍按对应步骤设置。
 
 系统目标为 Windows x64；当前仅在开发者本机验证。安装包未做代码签名。AE / PR 需要另行安装；基础素材整理不依赖 Adobe。AI 功能首次使用需要下载模型。
 
@@ -63,7 +71,7 @@
 下载页同时提供 `SHA256SUMS.txt`。在 PowerShell 中运行以下命令，将结果与校验文件对照：
 
 ```powershell
-Get-FileHash '.\YimuCraft.Setup.0.7.74.exe' -Algorithm SHA256
+Get-FileHash '.\YimuCraft.Setup.0.7.76.exe' -Algorithm SHA256
 ```
 
 ## 本地开发

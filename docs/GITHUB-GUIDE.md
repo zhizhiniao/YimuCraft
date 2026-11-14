@@ -2,7 +2,7 @@
 
 - **Code**：查看源码，首页自动展示 README。
 - **Releases**：下载安装包。`Pre-release` 表示预览版，不是稳定版。
-- **Tags**：版本快照；当前下载为 [v0.7.74-dev.1](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.74-dev.1)。旧版标签及附件可在 Releases 中查看。
+- **Tags**：版本快照；当前下载为 [v0.7.76-dev.1](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.76-dev.1)。旧版标签及附件可在 Releases 中查看。
 - **Issues**：记录问题和需求，一件事一个条目，写清复现步骤。
 - **Public / License**：当前主分支的原创代码与文档采用 MIT；根目录 LICENSE 是许可正文，第三方内容遵循各自许可。旧标签和安装包保持历史原样。
 

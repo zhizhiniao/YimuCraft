@@ -1,7 +1,7 @@
 const {app,dialog,ipcMain,nativeImage,shell,clipboard}=require('electron');
 const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
 const {ProjectCanvases,TYPES,fileKind}=require('./project-canvas.cjs');
-async function installProjectCanvas(win){
+async function installProjectCanvas(win,library){
   const folder=path.join(app.getPath('userData'),'project-canvases');
   const store=await new ProjectCanvases(folder).init();
   const discovery=require('./canvas-discovery.cjs'),visual=discovery.visualSearch(store);
@@ -12,6 +12,7 @@ async function installProjectCanvas(win){
   let actionQueue=Promise.resolve();
   const ordered=fn=>{const p=actionQueue.then(fn);actionQueue=p.catch(()=>{});return p;};
   const actions={
+    discoveryLibraryGroup:async(id,ids,name,location)=>{if(!library||location!==library.getRoot())throw Error('素材库已切换，请重新查找');if(!Array.isArray(ids)||!ids.length||ids.length>200||ids.some(i=>!Number.isSafeInteger(Number(i))||Number(i)<=0))throw Error('请选择 1–200 项');const rows=await library.command('getMany',ids.map(Number));if(location!==library.getRoot()||rows.length!==new Set(ids).size)throw Error('素材库或素材已变化，请重新查找');return discovery.libraryCandidateGroup(store,id,rows,name,()=>{if(location!==library.getRoot())throw Error('素材库已切换，请重新查找');});},
     discoveryGroup:async(id,ids,name)=>{if(!Array.isArray(ids)||!ids.length||ids.length>200)throw Error('请选择 1–200 项');await Promise.all(ids.map(item=>store.resolve(id,item)));return discovery.candidateGroup(store,id,ids,name);},discoveryUndo:(id,group)=>discovery.undoCandidateGroup(store,id,group),
     discoveryCancel:()=>{visual.cancel();return true;},
     discoverySimilar:async(id,query,referenceId)=>{let reference;if(referenceId){const row=store.board(id).items[referenceId];if(!row||row.kind!=='image'||row.hiddenAt||row.missing)throw Error('参考图片不可用');reference={id:referenceId};}else{const r=await dialog.showOpenDialog(win,{title:'以图找 · 选择参考图片',properties:['openFile'],filters:[{name:'图片',extensions:['png','jpg','jpeg','webp','tif','tiff','avif']}]});if(r.canceled)return null;reference={file:r.filePaths[0]};}return visual.search(id,query,reference);},

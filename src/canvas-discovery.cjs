@@ -5,7 +5,9 @@ const mediaFields=['relative','sourceId','ext','size','modified','identity','pix
 function syncReferences(board){for(const row of Object.values(board.items)){if(!row.referenceId)continue;const source=board.items[row.referenceId];if(!source){row.missing=true;continue;}for(const key of mediaFields)row[key]=source[key];row.missing=!!source.missing||!!source.hiddenAt;}}
 function candidateGroup(store,id,ids,name){
  if(!Array.isArray(ids)||!ids.length||ids.length>200||ids.some(i=>typeof i!=='string')||typeof name!=='string'||!name.trim()||name.trim().length>80)throw Error('请选择 1–200 项，并填写 1–80 字组名');
- return store.transaction(id,b=>{
+ return store.transaction(id,b=>buildCandidateGroup(b,ids,name));
+}
+function buildCandidateGroup(b,ids,name){
   if(b.removedAt)throw Error('仓库已移除');
   const rows=[...new Set(ids)].map(id=>Object.hasOwn(b.items,id)?b.items[id]:null);
   if(rows.some(i=>!i||i.hiddenAt||i.missing||i.referenceId||!['image','video','audio','project','document'].includes(i.kind)))throw Error('部分素材不可用，请重新选择');
@@ -16,6 +18,22 @@ function candidateGroup(store,id,ids,name){
   b.items[group.id]=group;b.groups['候选素材']??={x,y};const created=[];
   rows.forEach((source,index)=>{const row={...structuredClone(source),id:crypto.randomUUID(),referenceId:source.id,x:x+28+(index%cols)*280,y:y+48+Math.floor(index/cols)*240,width:256,height:190,sizeMode:'manual',parentId:group.id,group:'候选素材',history:[],admitted:true,hiddenAt:null,added:Date.now()};delete row.sequenceId;b.items[row.id]=row;created.push(row.id);});
   group.candidateIds=created;return {createdId:group.id};
+}
+async function libraryCandidateGroup(store,id,assets,name,validate=()=>{}){
+ const fs=require('node:fs/promises'),path=require('node:path'),{fileKind}=require('./project-canvas.cjs');
+ if(!assets.length||assets.length>200||typeof name!=='string'||!name.trim()||name.trim().length>80)throw Error('请选择素材并填写 1–80 字组名');
+ const files=[];
+ for(const a of assets){const file=await fs.realpath(a.path),st=await fs.stat(file),kind=fileKind(file);if(a.hidden||!st.isFile()||!kind)throw Error('部分素材不可用');files.push({asset:a,file,st,kind});}
+ return store.transaction(id,b=>{
+  validate();const ids=[];
+  for(const {asset,file,st,kind} of files){
+   let row=Object.values(b.items).find(i=>!i.referenceId&&!i.hiddenAt&&i.sourceId&&store.rawPath(b,i).toLowerCase()===file.toLowerCase());
+   if(!row){const source={id:crypto.randomUUID(),path:file,type:'file'};b.sources.push(source);
+    row={id:crypto.randomUUID(),sourceId:source.id,relative:path.basename(file),name:asset.name,kind,ext:asset.ext,size:st.size,modified:st.mtimeMs,tags:asset.tags||[],text:asset.note||'',status:'pending',x:0,y:0,width:256,height:190,group:'候选素材',admitted:false,hiddenAt:null,parentId:null,sizeMode:'manual',history:[],added:Date.now()};b.items[row.id]=row;
+   }
+   row.missing=false;ids.push(row.id);
+  }
+  return buildCandidateGroup(b,ids,name);
  });
 }
 function undoCandidateGroup(store,id,groupId){return store.transaction(id,b=>{const group=b.items[groupId];if(!group?.discovery||group.hiddenAt)throw Error('候选组已改变');const children=Object.values(b.items).filter(i=>i.parentId===groupId&&!i.hiddenAt);if(children.length!==group.candidateIds.length||children.some(i=>!group.candidateIds.includes(i.id)||!i.referenceId))throw Error('候选组成员已变化，请在画布中处理');for(const i of children){i.hiddenAt=Date.now();i.history.push({action:'undo-candidate',at:Date.now()});}group.hiddenAt=Date.now();});}
@@ -30,4 +48,4 @@ function visualSearch(store){
   }finally{if(current===token)current=null;}
  }};
 }
-module.exports={syncReferences,candidateGroup,undoCandidateGroup,visualSearch};
+module.exports={syncReferences,candidateGroup,libraryCandidateGroup,undoCandidateGroup,visualSearch};

@@ -16,7 +16,23 @@ $._yimuBridge.dispatch=function(request){
     var code=manager.process(app.project);if(code!==0||(manager.errors&&manager.errors.length))throw Error('PR 收集失败：'+code+' '+manager.errors);result={output:destination.fsName,project:inspect()};
    }finally{for(var i=0;i<keys.length;i++)options[keys[i]]=previous[keys[i]];}
   }
-  else if(request.operation==='import'){if(!app.project||!app.project.path)throw Error('请先在 PR 新建或打开工程');for(var i=0;i<p.paths.length;i++)if(!new File(p.paths[i]).exists)throw Error('文件不存在：'+p.paths[i]);if(!app.project.importFiles(p.paths,true,app.project.rootItem,false))throw Error('PR 素材导入失败');result=inspect();}
+  else if(request.operation==='import'){
+   if(!app.project||!app.project.path)throw Error('请先在 PR 新建或打开工程');
+   for(var i=0;i<p.paths.length;i++)if(!new File(p.paths[i]).exists)throw Error('文件不存在：'+p.paths[i]);
+   var project=app.project,root=project.rootItem,previous={},added=[];
+   for(var i=0;i<root.children.numItems;i++)previous[root.children[i].nodeId]=true;
+   if(!project.importFiles(p.paths,true,root,false))throw Error('PR 素材导入失败');
+   // Selection is best effort: a closed Project panel must not turn a completed import into an error.
+   try{
+    for(var i=0;i<root.children.numItems;i++)if(!previous[root.children[i].nodeId])added.push(root.children[i]);
+    var views=app.getProjectViewIDs();
+    for(var i=0;added.length&&i<views.length;i++){
+     var owner=app.getProjectFromViewID(views[i]);
+     if(owner&&owner.documentID===project.documentID){app.setProjectViewSelection(added,views[i]);break;}
+    }
+   }catch(ignoreSelection){}
+   result=inspect();
+  }
   else if(request.operation==='mogrt'){var seq=app.project.activeSequence;if(!seq)throw Error('请先激活 PR 时间线');var time=seq.getPlayerPosition().ticks,track=p.videoTrack===undefined?0:p.videoTrack;if(p.expectedSequence&&String(seq.sequenceID)!==String(p.expectedSequence))throw Error('活动时间线已改变，请重新选择目标轨道');if(p.expectedPosition&&String(time)!==String(p.expectedPosition))throw Error('播放头已移动，请重新选择目标轨道');if(track<0||track>=seq.videoTracks.numTracks||Math.floor(track)!==track)throw Error('目标视频轨不存在');var clips=seq.videoTracks[track].clips;for(var j=0;j<clips.numItems;j++)if(Number(clips[j].end.ticks)>Number(time))throw Error('此轨道在播放头处或其后已有片段，请选择空轨道，避免覆盖');var clip=seq.importMGT(p.path,time,track,p.audioTrack||0);if(!clip)throw Error('MOGRT 未插入时间线');result={clip:{name:clip.name,nodeId:clip.nodeId,start:clip.start.ticks,end:clip.end.ticks},project:inspect()};}
   else if(request.operation==='lut'){
    var seq=app.project.activeSequence;if(!seq)throw Error('请先激活 PR 时间线');

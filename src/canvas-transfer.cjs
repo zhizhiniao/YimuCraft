@@ -22,4 +22,5 @@ class CanvasTransfer {
  async windows(){return (await helper({action:'windows'})).windows;}
  async send(id,files){const target=(await this.targets()).find(t=>t.id===id);if(!target)throw Error('发送目标已移除');if(!files.length||files.length>100)throw Error('请选择 1–100 个素材文件');return helper({action:'send',target,files});}
 }
-module.exports={CanvasTransfer,validateTargets,defaults};
+function focusPremiere(project){return helper({action:'focusPremiere',project});}
+module.exports={CanvasTransfer,validateTargets,defaults,focusPremiere};
