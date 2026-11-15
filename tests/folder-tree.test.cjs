@@ -70,7 +70,7 @@ test('display names in referenced folders survive dragging, relinking, and resta
     await lib.importPaths(files);
     lib.db.exec('DROP TABLE folder_tree_names; PRAGMA user_version=3');
     lib.close(); lib = new Library(index);
-    assert.ok(fs.readdirSync(path.join(index,'schema-backups')).some(n => n.includes('pre-v3-to-v4')));
+    assert.ok(fs.readdirSync(path.join(index,'schema-backups')).some(n => n.includes('pre-v3-to-v'+require('../src/schema-migration.cjs').VERSION)));
     const original = lib.query().items;
     await lib.renameFolder(effects,'常用',index);
     assert.throws(()=>lib.organizeFolder(index,effects,target),/同名/);

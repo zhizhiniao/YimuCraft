@@ -341,6 +341,7 @@
  $('canvasShot').onchange=()=>run(async()=>{render();fit();await saveFilters();});$('canvasFilter').onchange=()=>run(async()=>{render();await saveFilters();});$('canvasSearch').oninput=()=>{clearTimeout(filterTimer);filterTimer=setTimeout(()=>run(async()=>{render();await saveFilters();}),180);};
  document.addEventListener('pointerup',()=>{const n=nodes.get(filePress?.id);if(n)n.draggable=false;});
  api.onChanged(next=>{if(!loading)merge(next);});api.onError(error=>message(error,true));api.onDragEnd(({token,error})=>endFileDrag(token,error));
- window.YimuProjectCanvas={onAction(name){if(discovery.isActive()){if(name==='search')discovery.focus();return name!=='preferences';}if(!active)return false;if(name==='search')run(async()=>{await quick.open(board?'filter':'source');if(board)$('canvasSearch').focus();});else if(name==='preferences')return false;else message('素材库操作请先切回“素材库”');return true;}};
- run(async()=>{const list=await api.command('list');populate(list);if(list.workspace==='canvas')await show(true);else if(list.workspace==='discovery')await show('discovery');});
+ const workspaceReady=run(async()=>{const list=await api.command('list');populate(list);if(list.workspace==='canvas')await show(true);else if(list.workspace==='discovery')await show('discovery');});
+ window.YimuProjectCanvas={ready:workspaceReady,getWorkspace:()=>discovery.isActive()?'discovery':active?'canvas':'library',async showWorkspace(name){if(!['library','canvas','discovery'].includes(name))throw Error('无效工作区');await workspaceReady;if(this.getWorkspace()!==name)await show(name==='canvas'?true:name==='discovery'?'discovery':false);},onAction(name){if(discovery.isActive()){if(name==='search')discovery.focus();return name!=='preferences';}if(!active)return false;if(name==='search')run(async()=>{await quick.open(board?'filter':'source');if(board)$('canvasSearch').focus();});else if(name==='preferences')return false;else message('素材库操作请先切回“素材库”');return true;}};
+
 })();

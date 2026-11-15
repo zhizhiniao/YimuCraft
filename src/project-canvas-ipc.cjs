@@ -1,11 +1,11 @@
 const {app,dialog,ipcMain,nativeImage,shell,clipboard}=require('electron');
 const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
 const {ProjectCanvases,TYPES,fileKind}=require('./project-canvas.cjs');
-async function installProjectCanvas(win,library){
+async function installProjectCanvas(win,library,cacheLocations){
   const folder=path.join(app.getPath('userData'),'project-canvases');
   const store=await new ProjectCanvases(folder).init();
   const discovery=require('./canvas-discovery.cjs'),visual=discovery.visualSearch(store);
-  const previews=new (require('./canvas-preview-media.cjs').CanvasPreviewMedia)(path.join(folder,'previews'));
+  let previews=new (require('./canvas-preview-media.cjs').CanvasPreviewMedia)(cacheLocations?.canvasPath('previews')||path.join(folder,'previews')),cachePaused=false;
   const transfer=new (require('./canvas-transfer.cjs').CanvasTransfer)(folder);const prepared=new Map();let nativeDragging=false;
   const transferFiles=(id,ids)=>{if(!Array.isArray(ids)||!ids.length||ids.length>100||ids.some(i=>typeof i!=='string'))throw Error('请选择 1–100 个素材');return store.dragFiles(id,ids);};
   const check=event=>{if(event.sender!==win.webContents||event.senderFrame!==win.webContents.mainFrame)throw Error('无效画布调用');};
@@ -47,7 +47,7 @@ async function installProjectCanvas(win,library){
     }catch(e){error=e.message;if(!win.isDestroyed())win.webContents.send('canvas-error',error);}
     finally{if(started)nativeDragging=false;if(!win.isDestroyed()&&event.sender===win.webContents)win.webContents.send('canvas-drag-ended',{token,error});}
   });
-  let thumbQueue=Promise.resolve();const pending=new Map();const cache=path.join(folder,'thumbnails');await fs.mkdir(cache,{recursive:true});
+  let thumbQueue=Promise.resolve();const pending=new Map();let cache=cacheLocations?.canvasPath('thumbnails')||path.join(folder,'thumbnails');await fs.mkdir(cache,{recursive:true});
   async function thumbnail(boardId,itemId){
     const file=await store.resolve(boardId,itemId),st=await fs.stat(file),hash=crypto.createHash('sha256').update(file+'|'+st.size+'|'+st.mtimeMs).digest('hex');
     const destination=path.join(cache,hash+'.jpg');try{await fs.access(destination);return destination;}catch{}
@@ -57,8 +57,9 @@ async function installProjectCanvas(win,library){
     }
     return pending.get(hash);
   }
-  return {store,async close(){await previews.close();await actionQueue;await store.close();},async response(url,request){
+  return {store,cacheItems(){const out=[];for(const board of store.data.boards)for(const item of Object.values(board.items)){if(['group','note','text','sequence'].includes(item.kind))continue;try{out.push({file:store.rawPath(board,item),kind:item.kind,size:item.size,modified:item.modified});}catch{}}return out;},async pauseCache(){cachePaused=true;await previews.close();await thumbQueue;},async resumeCache(){cache=cacheLocations?.canvasPath('thumbnails')||path.join(folder,'thumbnails');await fs.mkdir(cache,{recursive:true});previews=new (require('./canvas-preview-media.cjs').CanvasPreviewMedia)(cacheLocations?.canvasPath('previews')||path.join(folder,'previews'));cachePaused=false;},async close(){await previews.close();await actionQueue;await store.close();},async response(url,request){
     const [boardId,itemId,type]=url.pathname.slice(1).split('/');
+    if(cachePaused&&['thumb','preview'].includes(type))throw Error('正在切换画布缓存目录');
     let file=type==='thumb'?await thumbnail(boardId,itemId):['file','preview'].includes(type)?await store.resolve(boardId,itemId):null;
     if(file&&type==='preview')file=await previews.ensure(file,fileKind(file));
     if(!file)return new Response('Not found',{status:404});return require('./media-response.cjs').mediaResponse(file,request);

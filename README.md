@@ -8,9 +8,18 @@
 
 面向视频创作者的 Windows 本地素材管理工具，提供素材整理、媒体预览，以及 After Effects / Premiere Pro 联动。
 
-> **0.7.76 开发者预览版** · Windows x64 · 2026-11-13。GitHub 源码和下载安装包均为此版本。
+> **0.7.81 开发者预览版** · Windows x64 · 2026-11-15。GitHub 源码和下载安装包均为此版本。
 
-[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.76-dev.1/YimuCraft.Setup.0.7.76.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.76-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.81-dev.1/YimuCraft.Setup.0.7.81.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.81-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+
+## 0.7.81 文件夹 AI、十步引导与缓存管理
+
+- **文件夹 AI 分析**：使用自己的视觉 API，先试最多三项，核对后批量生成标签与独立内容说明，并按内容搜索；结果保存在一幕索引中，原文件不改写。真实音频理解仍在验证，暂无可用服务时跳过。
+- **十步引导**：介绍素材库、项目画布和找素材，实际切换工作区，并说明本地 AI 下载、API 设置与模型切换。帮助菜单可重开，结束或跳过恢复原工作区。
+- **缓存管理**：可选择素材库共用的媒体缓存目录及画布独立目录，优化音频波形按需加载与 MOV 跨重开复用。
+- **版本提示**：启动检查与帮助手动检查，下载后手动安装。0.7.79 及更早版本没有检测代码，本次须手动升级一次。
+
+核心 180/180，打包应用定向交互及真实图片/视频小样通过。安装包未签名，本机 NSIS 自动卸载旧文件曾失败；安装器升级、干净机器和其他环境仍待验证。详见[版本说明与升级边界](docs/releases/v0.7.81-dev.1.md)。
 
 ## 0.7.76 找素材、画布与 PR 导入
 
@@ -32,7 +41,7 @@
 
 ## 0.7.72 找素材
 
-0.7.72 首次提供项目范围查找。当前 0.7.76 默认查素材库，下拉可切换项目；先用名称或标签筛选，再加“横屏”等条件。项目范围还可选“只看已确认”。勾选 2–4 项可并排对比，选定素材可以作为独立引用加入画布候选组，保留原文件与原编排。
+0.7.72 首次提供项目范围查找。自 0.7.76 起默认查素材库，下拉可切换项目；先用名称或标签筛选，再加“横屏”等条件。项目范围还可选“只看已确认”。勾选 2–4 项可并排对比，选定素材可以作为独立引用加入画布候选组，保留原文件与原编排。
 
 ![0.7.72 打包应用的找素材界面，展示五张自动生成的测试图](docs/images/v0.7.72/discovery.png)
 

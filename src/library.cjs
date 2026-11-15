@@ -19,7 +19,7 @@ async function walk(root, report = () => {}, cancelled = () => false) {
     if (cancelled()) break;
     const p = stack.pop();
     try { const st = await fsp.lstat(p); if (st.isSymbolicLink()) continue;
-      if (st.isDirectory()) { for (const e of await fsp.readdir(p)) { if (!['.git','node_modules','.yimucraft'].includes(e)) stack.push(path.join(p,e)); } }
+      if (st.isDirectory()) { const entries=await fsp.readdir(p);if(require('./cache-marker.cjs').isCachePath(p)||(entries.includes('.yimucraft-cache.json')&&require('./cache-marker.cjs').isCacheDirectory(p)))continue;for (const e of entries) { if (!['.git','node_modules','.yimucraft'].includes(e)) stack.push(path.join(p,e)); } }
       else if (st.isFile()) files.push({path:p, size:st.size, modified:st.mtimeMs});
     } catch (e) { errors.push({path:p,error:e.message}); }
     if (files.length % 100 === 0) report({phase:'扫描',count:files.length});
@@ -53,6 +53,7 @@ class Library {
     this.db.exec('CREATE INDEX IF NOT EXISTS import_sources_asset ON import_sources(asset)');
 
     this.db.exec('CREATE TABLE IF NOT EXISTS semantic_features(asset INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,signature TEXT NOT NULL,model TEXT NOT NULL,vector BLOB NOT NULL)');
+    require('./folder-analysis.cjs').init(this.db);
     this.db.exec('CREATE TABLE IF NOT EXISTS visual_features(asset INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,signature TEXT NOT NULL,pixels TEXT NOT NULL)');
     });this.db.exec('PRAGMA journal_mode=WAL; BEGIN;');
     for(const [type,extensions] of Object.entries(groups))this.db.prepare("UPDATE assets SET kind=?,cover=CASE WHEN ?='image' THEN COALESCE(cover,path) ELSE cover END WHERE kind='other' AND ext IN (SELECT value FROM json_each(?))").run(type,type,JSON.stringify(extensions));
@@ -88,7 +89,7 @@ this.db.exec('COMMIT');require('./trash.cjs').recover(this);}catch(e){this.db.cl
   query(f={}) {
     if(f.color||f.similarTo)f={...f,visualIds:this.visualSearch(f).map(r=>r.id)};
     const where=['hidden=?'], args=[f.trash ? 1:0];
-    if (f.q) { where.push('(name LIKE ? ESCAPE \'\\\' OR tags LIKE ? ESCAPE \'\\\' OR note LIKE ? ESCAPE \'\\\')'); const s='%'+String(f.q).replace(/[\\%_]/g,'\\$&')+'%'; args.push(s,s,s); }
+    if(f.q){where.push("(name LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\' OR note LIKE ? ESCAPE '\\' OR EXISTS(SELECT 1 FROM ai_analyses ai WHERE ai.asset=assets.id AND json_extract(ai.data, ?) LIKE ? ESCAPE '\\'))"); const s='%'+String(f.q).replace(/[\\%_]/g,'\\$&')+'%'; args.push(s,s,s,"$.description",s); }
     if(f.kind==='pendingAe'){where.push("ext IN ('aep','aepx') AND (preview IS NULL OR preview='')");}else if (f.kind) {where.push('kind=?'); args.push(f.kind);}
     if(f.effectsOnly&&f.kind!=='pendingAe'&&!f.trash)where.push("(ext NOT IN ('aep','aepx') OR (preview IS NOT NULL AND preview!=''))");
     if(Array.isArray(f.extensions)&&f.extensions.length){where.push('ext IN (SELECT value FROM json_each(?))');args.push(JSON.stringify(f.extensions));}
@@ -161,7 +162,7 @@ this.db.exec('COMMIT');require('./trash.cjs').recover(this);}catch(e){this.db.cl
       const dir=path.dirname(f.path); for(const n of await fsp.readdir(dir)) byPath.set(key(path.join(dir,n)),path.join(dir,n));
       const sub=path.join(dir,path.basename(f.path,path.extname(f.path))); try { for(const n of await fsp.readdir(sub)) byPath.set(key(path.join(sub,n)),path.join(sub,n)); } catch {}
     }
-    const put=this.db.prepare(`INSERT INTO assets(path,path_key,name,ext,kind,folder,size,modified,added,cover,preview) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(path_key) DO UPDATE SET name=excluded.name,ext=excluded.ext,kind=excluded.kind,folder=excluded.folder,size=excluded.size,modified=excluded.modified,cover=excluded.cover,preview=excluded.preview`);
+    const put=this.db.prepare(`INSERT INTO assets(path,path_key,name,ext,kind,folder,size,modified,added,cover,preview) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(path_key) DO UPDATE SET name=excluded.name,ext=excluded.ext,kind=excluded.kind,folder=excluded.folder,size=excluded.size,modified=excluded.modified,cover=excluded.cover,preview=excluded.preview`),previous=this.db.prepare('SELECT id,size,modified,preview,cover_override FROM assets WHERE path_key=?');
     let count=0; const ownTransaction=!this.db.isTransaction;
     if(ownTransaction)this.db.exec('BEGIN');
     try { for (const f of scanned) {
@@ -170,7 +171,9 @@ this.db.exec('COMMIT');require('./trash.cjs').recover(this);}catch(e){this.db.cl
       const ext=path.extname(f.path).slice(1).toLowerCase(), type=kind(ext), stem=f.path.slice(0,-ext.length-1);
       const bases=[stem,path.join(stem,path.basename(stem))];
       const find=es=>{for(const base of bases) for(const e of es){const p=byPath.get(key(base+'.'+e));if(p&&fs.statSync(p).isFile())return p;}return null;};
-      const cover=type==='image'?f.path:find(groups.image); const preview=type==='video'||type==='audio'?f.path:type==='project'?find(groups.video):null;
+      const cover=type==='image'?f.path:find(groups.image);let preview=type==='video'||type==='audio'?f.path:type==='project'?find(groups.video):null;
+      const old=previous.get(key(f.path));if(['video','audio'].includes(type)&&old?.size===f.size&&old.modified===f.modified&&old.preview&&fs.existsSync(old.preview))preview=old.preview;
+      if(old&&(old.size!==f.size||old.modified!==f.modified)&&old.cover_override&&old.preview&&(inside(path.join(this.folder,'previews'),old.preview)||require('./cache-marker.cjs').managedFile(old.preview))&&path.dirname(old.cover_override)===path.dirname(old.preview))this.db.prepare('UPDATE assets SET cover_override=NULL WHERE id=?').run(old.id);
       put.run(f.path,key(f.path),path.basename(f.path),ext,type,path.dirname(f.path),f.size,f.modified,Date.now(),cover,preview);const imported=this.db.prepare('SELECT id FROM assets WHERE path_key=?').get(key(f.path));require('./file-sync.cjs').remember(this,f.path,imported.id);count++;
       if(count%100===0) {if(ownTransaction)this.db.exec('COMMIT');report({phase:'索引',count,total:scanned.length});await new Promise(r=>setImmediate(r));if(ownTransaction)this.db.exec('BEGIN');}
     } if(ownTransaction)this.db.exec('COMMIT'); } catch(e){if(ownTransaction&&this.db.isTransaction)this.db.exec('ROLLBACK');throw e;}
