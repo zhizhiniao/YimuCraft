@@ -8,9 +8,19 @@
 
 面向视频创作者的 Windows 本地素材管理工具，提供素材整理、媒体预览，以及 After Effects / Premiere Pro 联动。
 
-> **0.7.83 开发者预览版** · Windows x64 · 2026-11-16。GitHub 源码和下载安装包均为此版本。
+> **0.7.84 开发者预览版** · Windows x64 · 2026-11-16。GitHub 源码和下载安装包均为此版本。
 
-[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.83-dev.1/YimuCraft.Setup.0.7.83.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.83-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.84-dev.1/YimuCraft.Setup.0.7.84.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.84-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+
+## 0.7.84 文字框适合内容
+
+文字节点按实际字体和最长一行自动收紧，输入时随增删文字调整，旧文字节点重开后同样适用。手动拉宽后保留固定尺寸，选中后点“适合文字”恢复自动；说明卡片和分组尺寸不改变。[版本说明](docs/releases/v0.7.84-dev.1.md)。
+
+![0.7.84 修复后的文字框，来自真实软件验收](docs/images/v0.7.84/text-fit-after.png)
+
+用户提供的分组流程图示例（截图为0.7.83，用于展示画布场景）：
+
+![用户提供的分组流程画布，截图版本0.7.83](docs/images/v0.7.84/flowchart-user-0.7.83.png)
 
 ## 0.7.83 画布连线与节点颜色
 
@@ -76,7 +86,7 @@
 
 ## 安装与开始使用
 
-1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.83-dev.1) 下载 `YimuCraft.Setup.0.7.83.exe`。
+1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.84-dev.1) 下载 `YimuCraft.Setup.0.7.84.exe`。
 2. 将安装包放在本机磁盘后运行，按向导完成安装。
 3. 打开“一幕 YimuCraft”，新建素材库或导入文件。首次安装不附带演示素材。
 4. 如需 Adobe 联动，按[使用说明](docs/USAGE.md)完成设置。PR 后台连接由一幕自动安装，首次升级后需重启 PR 一次；AE 仍按对应步骤设置。
