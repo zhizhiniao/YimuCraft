@@ -21,6 +21,7 @@ async function installProjectCanvas(win,library,cacheLocations){
     prepareDrag:async(id,ids)=>{const files=await transferFiles(id,ids);const token=crypto.randomUUID();for(const [key,value] of prepared)if(value.until<Date.now())prepared.delete(key);while(prepared.size>=8)prepared.delete(prepared.keys().next().value);prepared.set(token,{files,until:Date.now()+60000});return token;},
     list:()=>store.list(),workspace:value=>store.workspace(value),settings:(id,settings)=>store.settings(id,settings),removeRepository:id=>store.remove(id),
     move:(id,changes)=>store.move(id,changes),create:(id,node)=>store.create(id,node),dissolve:(id,group)=>store.dissolve(id,group),connect:(id,from,to,label,anchors)=>store.connect(id,from,to,label,anchors),unlink:(id,line)=>store.unlink(id,line),
+    patchLink:(id,line,changes)=>store.patchLink(id,line,changes),mergeLinks:(id,line)=>store.mergeLinks(id,line),edgeStyle:(id,style,unify)=>store.edgeStyle(id,style,unify),undoLinks:id=>store.undoLinks(id),
     importFiles:async id=>{const r=await dialog.showOpenDialog(win,{title:'选择素材 · 引用原文件',properties:['openFile','multiSelections'],filters:[{name:'图片、视频、音频与工程',extensions:Object.values(TYPES).join(' ').split(' ')}]});return r.canceled?null:store.addSources(id,r.filePaths,'file');},
     addSource:async id=>{const r=await dialog.showOpenDialog(win,{title:'添加来源文件夹 · 不复制素材',properties:['openDirectory']});return r.canceled?null:store.addSources(id,r.filePaths,'directory');},
     choose:async()=>{

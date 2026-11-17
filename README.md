@@ -8,9 +8,17 @@
 
 面向视频创作者的 Windows 本地素材管理工具，提供素材整理、媒体预览，以及 After Effects / Premiere Pro 联动。
 
-> **0.7.81 开发者预览版** · Windows x64 · 2026-11-15。GitHub 源码和下载安装包均为此版本。
+> **0.7.83 开发者预览版** · Windows x64 · 2026-11-16。GitHub 源码和下载安装包均为此版本。
 
-[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.81-dev.1/YimuCraft.Setup.0.7.81.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.81-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+[下载 Windows 安装包](https://github.com/zhizhiniao/YimuCraft/releases/download/v0.7.83-dev.1/YimuCraft.Setup.0.7.83.exe) · [版本说明与校验文件](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.83-dev.1) · [使用说明](docs/USAGE.md) · [功能状态](docs/PARITY.md) · [反馈问题](https://github.com/zhizhiniao/YimuCraft/issues)
+
+## 0.7.83 画布连线与节点颜色
+
+- **四种连线**：平滑曲线、圆角折线、直角折线、直线；可设置整图默认或单条线。直线遇到节点时自动折线绕行。
+- **双向与标签**：单向、双向、反向、无箭头；反向的两条线可合并。标签可编辑或留空，随节点移动，并自动避让节点与其他标签。
+- **节点颜色**：选中说明、文字节点或分组，在底部改颜色；Shift 多选可统一修改。连线改动支持撤销，重开保留。
+
+本机打包版四样式、真实拖动、分组展开/折叠、缩放、单个/批量改色与重开通过。完全重叠或指定端口被遮住时会提示拉开节点；不保证线与线零交叉。[版本说明与升级边界](docs/releases/v0.7.83-dev.1.md)。
 
 ## 0.7.81 文件夹 AI、十步引导与缓存管理
 
@@ -68,7 +76,7 @@
 
 ## 安装与开始使用
 
-1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.76-dev.1) 下载 `YimuCraft.Setup.0.7.76.exe`。
+1. 在 [Releases](https://github.com/zhizhiniao/YimuCraft/releases/tag/v0.7.83-dev.1) 下载 `YimuCraft.Setup.0.7.83.exe`。
 2. 将安装包放在本机磁盘后运行，按向导完成安装。
 3. 打开“一幕 YimuCraft”，新建素材库或导入文件。首次安装不附带演示素材。
 4. 如需 Adobe 联动，按[使用说明](docs/USAGE.md)完成设置。PR 后台连接由一幕自动安装，首次升级后需重启 PR 一次；AE 仍按对应步骤设置。
